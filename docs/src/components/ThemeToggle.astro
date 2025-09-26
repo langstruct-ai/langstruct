@@ -1,0 +1,59 @@
+---
+---
+
+<!--
+  Custom ThemeProvider compatible with Starlight’s ThemeSelect.
+  - Defines `window.StarlightThemeProvider` expected by Starlight.
+  - Keeps dark as the first-visit default by seeding localStorage.
+-->
+<script is:inline>
+  window.StarlightThemeProvider = (() => {
+    const storageKey = 'starlight-theme';
+    const storedTheme = typeof localStorage !== 'undefined' && localStorage.getItem(storageKey);
+
+    // On first visit, seed dark as the default so the initial render is dark.
+    if (!storedTheme && typeof localStorage !== 'undefined') {
+      localStorage.setItem(storageKey, 'dark');
+    }
+
+    // Compute effective theme for initial paint.
+    const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+    const initial = (typeof localStorage !== 'undefined' && localStorage.getItem(storageKey)) || 'auto';
+    const effective = initial === 'auto' ? (prefersLight ? 'light' : 'dark') : (initial === 'light' ? 'light' : 'dark');
+
+    // Apply to <html data-theme="..."> to match Starlight’s styling.
+    document.documentElement.dataset.theme = effective;
+
+    return {
+      // Keep ThemeSelect UIs in sync and swap the label icon.
+      updatePickers(theme = initial || 'auto') {
+        document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+          const select = picker.querySelector('select');
+          if (select) select.value = theme;
+          const tmpl = document.querySelector('#theme-icons');
+          const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+          if (newIcon) {
+            const oldIcon = picker.querySelector('svg.label-icon');
+            if (oldIcon) oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+          }
+        });
+      },
+    };
+  })();
+  </script>
+
+<!-- Inline theme icons used by ThemeSelect’s label icon swap -->
+<template id="theme-icons">
+  <!-- light -->
+  <svg class="light" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.8 1.42-1.42zm10.45 12.73l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM12 4V1h-0v3h0zm0 19v-3h0v3h0zM4 13H1v-0h3v0zm19 0h-3v0h3v0zM6.76 19.16l-1.42 1.42-1.79-1.8 1.41-1.41 1.8 1.79zM20.24 4.84l-1.4-1.4-1.8 1.79 1.41 1.41 1.79-1.8zM12 7a5 5 0 100 10 5 5 0 000-10z"/>
+  </svg>
+  <!-- dark -->
+  <svg class="dark" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M9.37 5.51A7 7 0 0012 19a7 7 0 006.49-4.37A8 8 0 119.37 5.51z"/>
+  </svg>
+  <!-- auto -->
+  <svg class="auto" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M20 6H4a2 2 0 00-2 2v8a2 2 0 002 2h4l2 2h4l2-2h4a2 2 0 002-2V8a2 2 0 00-2-2zm0 10H4V8h16v8z"/>
+  </svg>
+  </template>

@@ -1,0 +1,592 @@
+/* Custom CSS for LangStruct Documentation */
+/* Leverages Catppuccin theme colors and Starlight design system */
+
+/* Custom font imports */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* Root variables for consistent theming */
+:root {
+  /* Typography */
+  --sl-font-system: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --sl-font-system-mono: 'JetBrains Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+
+  /* Spacing adjustments */
+  --sl-line-height: 1.7;
+  --sl-line-height-headings: 1.4;
+
+  /* Enhanced shadows */
+  --sl-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --sl-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --sl-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+  /* Border radius consistency */
+  --sl-border-radius: 8px;
+  --sl-border-radius-lg: 12px;
+}
+
+/* Enhanced typography */
+.sl-markdown-content {
+  font-family: var(--sl-font-system);
+  line-height: var(--sl-line-height);
+}
+
+.sl-markdown-content h1,
+.sl-markdown-content h2,
+.sl-markdown-content h3,
+.sl-markdown-content h4,
+.sl-markdown-content h5,
+.sl-markdown-content h6 {
+  line-height: var(--sl-line-height-headings);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+/* Code block enhancements */
+.sl-markdown-content pre {
+  border-radius: var(--sl-border-radius);
+  box-shadow: var(--sl-shadow-sm);
+  border: 1px solid var(--sl-color-hairline);
+}
+
+.sl-markdown-content code {
+  font-family: var(--sl-font-system-mono);
+  font-size: 0.875em;
+  font-weight: 500;
+}
+
+.sl-markdown-content :not(pre)>code {
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: 4px;
+  padding: 0.125em 0.375em;
+}
+
+/* Card component enhancements */
+.card-grid {
+  gap: 1.5rem;
+}
+
+.card {
+  border-radius: var(--sl-border-radius-lg);
+  box-shadow: var(--sl-shadow-md);
+  transition: all 0.2s ease;
+  border: 1px solid var(--sl-color-hairline);
+}
+
+.card:hover {
+  box-shadow: var(--sl-shadow-lg);
+  transform: translateY(-2px);
+}
+
+/* Tab component styling */
+.tabs {
+  border-radius: var(--sl-border-radius);
+  overflow: hidden;
+  box-shadow: var(--sl-shadow-sm);
+  border: 1px solid var(--sl-color-hairline);
+}
+
+.tabs [role="tab"] {
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.tabs [role="tab"]:hover {
+  background: var(--sl-color-bg-accent);
+}
+
+/* Callout enhancements */
+.sl-markdown-content .starlight-aside {
+  border-radius: var(--sl-border-radius);
+  box-shadow: var(--sl-shadow-sm);
+  border-width: 1px;
+  border-style: solid;
+}
+
+/* Navigation enhancements */
+.sidebar-content {
+  font-family: var(--sl-font-system);
+}
+
+.sidebar-content a {
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.sidebar-content a:hover {
+  /* background: var(--sl-color-bg-accent); */
+  transform: translateX(2px);
+}
+
+/* Hero section enhancements */
+.hero {
+  text-align: center;
+  padding: 4rem 1rem;
+}
+
+.hero h1 {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, var(--sl-color-text-accent), var(--sl-color-accent));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero .tagline {
+  font-size: 1.25rem;
+  color: var(--sl-color-text);
+  margin-bottom: 2rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+}
+
+/* Action buttons */
+.hero .actions {
+  display: flex;
+  gap: 0.875rem; /* slightly tighter spacing for balance */
+  align-items: center; /* vertically align icons and text */
+  flex-wrap: wrap;
+}
+
+.hero .action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.3rem; /* even height without excess width */
+  min-height: 2.75rem; /* consistent button height */
+  line-height: 1; /* avoid vertical misalignment */
+  white-space: nowrap; /* prevent single-action wrap */
+  border-radius: var(--sl-border-radius);
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  box-shadow: var(--sl-shadow-sm);
+}
+
+/* Normalize icon sizing in actions */
+.hero .action svg {
+  width: 1.1em;
+  height: 1.1em;
+}
+
+.hero .action.primary {
+  background: var(--sl-color-accent);
+  color: var(--sl-color-white);
+}
+
+.hero .action.primary:hover {
+  background: var(--sl-color-accent-high);
+  box-shadow: var(--sl-shadow-md);
+  transform: translateY(-1px);
+}
+
+.hero .action.secondary {
+  background: var(--sl-color-bg-accent);
+  color: var(--sl-color-text);
+  border: 1px solid var(--sl-color-hairline);
+}
+
+.hero .action.secondary:hover {
+  background: var(--sl-color-bg-sidebar);
+  box-shadow: var(--sl-shadow-md);
+  transform: translateY(-1px);
+}
+
+/* Table enhancements */
+.sl-markdown-content table {
+  border-radius: var(--sl-border-radius);
+  overflow: hidden;
+  box-shadow: var(--sl-shadow-sm);
+  border: 1px solid var(--sl-color-hairline);
+}
+
+.sl-markdown-content th {
+  background: var(--sl-color-bg-accent);
+  font-weight: 600;
+  color: var(--sl-color-text); /* Ensure high contrast text */
+}
+
+/* Dark mode table header contrast */
+[data-theme="dark"] .sl-markdown-content th {
+  background: var(--sl-color-gray-6);
+  color: var(--sl-color-white);
+}
+
+/* Light mode table header contrast */
+[data-theme="light"] .sl-markdown-content th {
+  background: var(--sl-color-gray-5);
+  color: var(--sl-color-text);
+}
+
+.sl-markdown-content td,
+.sl-markdown-content th {
+  padding: 0.75rem 1rem;
+}
+
+/* Badge/pill styling for inline elements */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: var(--sl-color-accent-low);
+  color: var(--sl-color-accent-high);
+  border: 1px solid var(--sl-color-accent);
+}
+
+/* Search enhancements */
+.search-input {
+  border-radius: var(--sl-border-radius);
+  box-shadow: var(--sl-shadow-sm);
+  border: 1px solid var(--sl-color-hairline);
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .hero {
+    padding: 2rem 1rem;
+  }
+
+  .hero h1 {
+    font-size: 2.5rem;
+  }
+
+  .hero .actions {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .hero .action {
+    width: 100%;
+    max-width: 320px;
+    justify-content: center;
+  }
+
+  .card-grid {
+    gap: 1rem;
+  }
+}
+
+/* Print styles */
+@media print {
+
+  .hero .actions,
+  .sidebar,
+  .pagination,
+  .edit-page {
+    display: none;
+  }
+
+  .sl-markdown-content {
+    max-width: none;
+  }
+}
+
+/* Focus styles for accessibility */
+.hero .action:focus-visible,
+.sidebar-content a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--sl-color-accent);
+  outline-offset: 2px;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Default to dark mode */
+:root {
+  color-scheme: dark;
+}
+
+html {
+  color-scheme: dark;
+}
+
+/* Ensure dark mode is default on first load */
+html:not([data-theme]) {
+  --sl-color-accent: #8aadf4;
+  /* Catppuccin Macchiato Blue */
+  --sl-color-accent-low: #24273a;
+  /* Catppuccin Macchiato Base */
+  --sl-color-accent-high: #91d7e3;
+  /* Catppuccin Macchiato Sky */
+  color-scheme: dark;
+}
+
+/* Custom scrollbar (webkit only) */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--sl-color-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--sl-color-gray-3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--sl-color-gray-4);
+}
+
+/* Animation utilities */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Loading states */
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid var(--sl-color-accent);
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Catppuccin theme color overrides for better integration */
+[data-theme="light"] {
+  --sl-color-accent: #1e66f5;
+  /* Catppuccin Latte Blue */
+  --sl-color-accent-low: #eff1f5;
+  /* Catppuccin Latte Base */
+  --sl-color-accent-high: #04a5e5;
+  /* Catppuccin Latte Sky */
+}
+
+[data-theme="dark"] {
+  --sl-color-accent: #8aadf4;
+  /* Catppuccin Macchiato Blue */
+  --sl-color-accent-low: #24273a;
+  /* Catppuccin Macchiato Base */
+  --sl-color-accent-high: #91d7e3;
+  /* Catppuccin Macchiato Sky */
+}
+
+/* Logo dark mode fix - target the actual logo image */
+.site-title img {
+  transition: filter 0.2s ease;
+}
+
+/* Invert logo color in dark mode */
+[data-theme="dark"] .site-title img {
+  filter: invert(1) brightness(1);
+}
+
+/* Ensure logo works with system dark mode preference */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .site-title img {
+    filter: invert(1) brightness(1);
+  }
+}
+
+/* Fix Starlight sidebar active state spacing */
+.sidebar [aria-current="page"] {
+  background: var(--sl-color-accent-low);
+  color: var(--sl-color-accent-high);
+  border-radius: 4px;
+  padding: 0.375rem 0.75rem !important;
+  margin: 0.125rem 0;
+  font-weight: 500;
+  border-left: 2px solid var(--sl-color-accent);
+  margin-left: 0.5rem;
+  padding-left: 0.5rem !important;
+}
+
+/* Improve hover states */
+.sidebar a:hover:not([aria-current="page"]) {
+  background: var(--sl-color-gray-6);
+  border-radius: 4px;
+  padding: 0.375rem 0.75rem;
+  margin: 0.125rem 0;
+  transition: all 0.15s ease;
+}
+
+/* Fix sidebar link spacing */
+.sidebar a {
+  display: block;
+  padding: 0.375rem 0.75rem;
+  margin: 0.125rem 0;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  line-height: 1.4;
+}
+
+/* Group title styling */
+.sidebar .group-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sl-color-gray-2);
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  padding: 0 0.75rem;
+}
+
+/* Fix content overflow with table of contents */
+@media (min-width: 1200px) {
+  /* Target the main pane to give it more space when TOC is visible */
+  .main-pane {
+    max-width: calc(100vw - 350px); /* Reduce space reserved for TOC */
+    width: auto;
+  }
+
+  .sl-markdown-content {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    overflow-x: hidden; /* Prevent horizontal bleed into TOC column */
+  }
+
+  /* Force code blocks to stay within content bounds */
+  .sl-markdown-content pre {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+  }
+
+  .sl-markdown-content pre code {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    display: block !important;
+    white-space: pre !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Fix figure containers that hold code blocks */
+  .sl-markdown-content figure {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    margin: 1rem 0 !important;
+  }
+
+  .sl-markdown-content table {
+    max-width: 100%;
+    overflow-x: auto;
+    display: block;
+    white-space: nowrap;
+  }
+}
+
+/* Ensure code blocks don't overflow */
+.sl-markdown-content pre code {
+  max-width: 100%;
+  overflow-x: auto;
+  display: block;
+}
+
+/* Prevent code blocks inside cards from bleeding into the right panel */
+.sl-markdown-content .card {
+  overflow: hidden; /* Clip any horizontal bleed from inner elements */
+}
+
+.sl-markdown-content .card pre,
+.sl-markdown-content .card pre code {
+  max-width: 100% !important;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto !important;
+}
+
+/* Extra guard: keep any figure/code wrappers inside content column */
+.sl-markdown-content .card figure {
+  max-width: 100% !important;
+  overflow-x: auto;
+  margin-right: 0;
+}
+
+/* Ensure the right sidebar panel stays above content if overlap occurs */
+.right-sidebar-panel {
+  position: relative;
+  z-index: 2;
+}
+
+/* Better responsive layout for smaller screens */
+@media (max-width: 1199px) {
+  .main-pane {
+    max-width: 100%;
+  }
+
+  .sl-markdown-content {
+    max-width: 100%;
+    padding-right: 1rem;
+  }
+}
+
+/* Improve table responsiveness */
+.sl-markdown-content .table-wrapper {
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.sl-markdown-content table {
+  min-width: 100%;
+  table-layout: auto;
+}
+
+/* Compact code cards: reduce internal padding to maximize code space */
+/* Prefer targeting only cards that contain code blocks */
+.sl-markdown-content .card:has(pre) {
+  /* Reduce from Tailwind p-6 (1.5rem) to ~0.875–1rem */
+  padding: 0.75rem 0.875rem;
+}
+
+/* Fallback for browsers without :has support: gently reduce all markdown card padding */
+@supports not (selector(:has(*))) {
+  .sl-markdown-content .card {
+    padding: 1rem; /* down from 1.5rem */
+  }
+}
+
+/* Slightly tighten code block padding so short code doesn't scroll */
+.sl-markdown-content pre {
+  padding: 0.75rem 0.875rem;
+}
+
+/* Avoid extra horizontal inset inside cards */
+.sl-markdown-content .card pre {
+  margin-left: 0;
+  margin-right: 0;
+}

@@ -1,0 +1,548 @@
+---
+title: Scientific Paper Analysis
+description: Extract methodology, results, citations, and key findings from research papers and scientific literature
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Extract structured information from research papers, academic articles, and scientific literature including methodology, results, citations, and key findings for literature reviews, meta-analysis, and research synthesis.
+
+## Scientific Paper Schema
+
+Define comprehensive schemas for academic paper analysis:
+
+```python
+from pydantic import BaseModel, Field
+from langstruct import LangStruct
+from typing import List, Optional, Dict
+from datetime import datetime
+
+class AuthorSchema(BaseModel):
+    name: str = Field(description="Author's full name")
+    affiliation: Optional[str] = Field(description="Author's institutional affiliation")
+    email: Optional[str] = Field(description="Author's email address")
+    orcid: Optional[str] = Field(description="ORCID identifier")
+
+class CitationSchema(BaseModel):
+    title: str = Field(description="Title of cited work")
+    authors: List[str] = Field(description="Authors of cited work")
+    journal: Optional[str] = Field(description="Journal or venue name")
+    year: Optional[int] = Field(description="Publication year")
+    doi: Optional[str] = Field(description="DOI identifier")
+    citation_type: str = Field(description="Type of citation (supporting, contrasting, methodology)")
+
+class MethodologySchema(BaseModel):
+    study_design: str = Field(description="Research design or methodology type")
+    sample_size: Optional[int] = Field(description="Number of subjects or samples")
+    data_collection: str = Field(description="Data collection methods")
+    analysis_methods: List[str] = Field(description="Statistical or analytical methods used")
+    materials: List[str] = Field(description="Materials, tools, or instruments used")
+    limitations: List[str] = Field(description="Study limitations acknowledged by authors")
+
+class ResultSchema(BaseModel):
+    finding: str = Field(description="Key finding or result")
+    statistical_significance: Optional[str] = Field(description="Statistical significance (p-value, confidence interval)")
+    effect_size: Optional[str] = Field(description="Effect size or magnitude")
+    supporting_data: Optional[str] = Field(description="Supporting data or evidence")
+
+class KeywordSchema(BaseModel):
+    keywords: List[str] = Field(description="Author-provided keywords")
+    research_domains: List[str] = Field(description="Research domains or fields")
+    methodology_tags: List[str] = Field(description="Methodology-related tags")
+
+class ScientificPaperSchema(BaseModel):
+    title: str = Field(description="Paper title")
+    authors: List[AuthorSchema] = Field(description="All authors")
+    abstract: str = Field(description="Paper abstract")
+    keywords: KeywordSchema = Field(description="Keywords and research domains")
+    publication_info: Dict[str, str] = Field(description="Journal, volume, pages, DOI, publication date")
+    research_question: str = Field(description="Main research question or hypothesis")
+    methodology: MethodologySchema = Field(description="Research methodology and methods")
+    key_results: List[ResultSchema] = Field(description="Main findings and results")
+    conclusions: List[str] = Field(description="Author conclusions")
+    future_work: List[str] = Field(description="Suggested future research directions")
+    citations: List[CitationSchema] = Field(description="Key references cited")
+    funding: Optional[str] = Field(description="Funding sources")
+    conflicts_of_interest: Optional[str] = Field(description="Declared conflicts of interest")
+```
+
+## Basic Scientific Paper Extraction
+
+Create an extractor for research paper analysis:
+
+```python
+# Create the extractor optimized for academic content
+extractor = LangStruct(
+    schema=ScientificPaperSchema,
+    model="gemini/gemini-2.5-flash-lite",  # Fast and reliable for academic content
+    optimize=True,
+    use_sources=True,  # Track where information was found
+    temperature=0.2,   # Slightly higher for nuanced interpretation
+    max_retries=3
+)
+
+# Example research paper text (excerpt)
+paper_text = """
+Machine Learning Approaches for Climate Change Prediction: A Comparative Study
+
+Authors: Dr. Sarah Chen¹, Prof. Michael Rodriguez², Dr. Lisa Wang¹
+¹Department of Environmental Science, Stanford University, Stanford, CA
+²Climate Research Institute, MIT, Cambridge, MA
+
+Abstract:
+Climate change prediction remains one of the most critical challenges of our time.
+This study compares the effectiveness of three machine learning approaches—Random
+Forest (RF), Support Vector Machines (SVM), and Long Short-Term Memory networks
+(LSTM)—for predicting temperature anomalies using 50 years of global climate data.
+Our analysis of 10,000 weather stations worldwide shows that LSTM models achieve
+the highest accuracy (R² = 0.89, p < 0.001) compared to RF (R² = 0.78) and SVM
+(R² = 0.71). The study demonstrates that deep learning approaches can significantly
+improve climate prediction accuracy, with implications for policy and adaptation planning.
+
+Keywords: climate change, machine learning, temperature prediction, LSTM, comparative analysis
+
+1. Introduction
+Climate prediction accuracy is crucial for informed policy decisions and adaptation
+strategies (Hansen et al., 2016; IPCC, 2021). Traditional statistical models have
+limitations in capturing complex non-linear relationships in climate systems
+(Smith & Johnson, 2020). This research addresses the question: "Which machine
+learning approach provides the most accurate temperature anomaly predictions?"
+
+2. Methodology
+Study Design: Comparative experimental design using historical climate data
+Sample: 50 years of daily temperature data from 10,000 weather stations (1973-2023)
+Data Collection: National Oceanic and Atmospheric Administration (NOAA) database
+Analysis Methods:
+- Random Forest with 1000 trees
+- Support Vector Machine with RBF kernel
+- LSTM with 128 hidden units, 3 layers
+- 80/20 train-test split with 5-fold cross-validation
+Materials: Python 3.9, TensorFlow 2.8, Scikit-learn 1.1
+Limitations: Limited to temperature data only, potential geographic bias
+
+3. Results
+The LSTM model achieved superior performance across all metrics:
+- LSTM: R² = 0.89 (95% CI: 0.87-0.91), RMSE = 0.34°C, p < 0.001
+- Random Forest: R² = 0.78 (95% CI: 0.75-0.81), RMSE = 0.45°C
+- SVM: R² = 0.71 (95% CI: 0.68-0.74), RMSE = 0.52°C
+
+Regional analysis showed LSTM improvements were consistent across all climate zones,
+with the largest gains in tropical regions (R² improvement of 0.15 over RF).
+
+4. Conclusions
+LSTM networks provide significantly better climate prediction accuracy than
+traditional machine learning approaches. The 14% improvement in R² represents
+a substantial advance for climate modeling applications.
+
+Future research should explore: (1) integration of satellite data, (2) ensemble
+methods combining multiple ML approaches, (3) real-time prediction systems.
+
+Funding: This research was supported by NSF Grant #2045789 and NASA Climate Grant #80NSSC21K1234.
+Conflicts: The authors declare no conflicts of interest.
+
+References:
+Hansen, J., Sato, M., & Kharecha, P. (2016). Global temperature evolution: Recent
+trends and some pitfalls. Journal of Climate, 29(4), 1265-1281.
+
+IPCC. (2021). Climate Change 2021: The Physical Science Basis. Cambridge University Press.
+
+Smith, A., & Johnson, B. (2020). Limitations of traditional climate models.
+Nature Climate Change, 10(8), 723-729.
+"""
+
+# Extract paper information
+result = extractor.extract(paper_text)
+
+print("Scientific Paper Analysis:")
+print(f"Title: {result.entities.title}")
+print(f"Authors: {[author.name for author in result.entities.authors]}")
+print(f"Research Question: {result.entities.research_question}")
+print(f"Sample Size: {result.entities.methodology.sample_size:,}")
+print(f"Key Results: {len(result.entities.key_results)} findings")
+print(f"Citations: {len(result.entities.citations)} references")
+
+# Show methodology details
+print(f"\nMethodology:")
+print(f"Study Design: {result.entities.methodology.study_design}")
+print(f"Analysis Methods: {', '.join(result.entities.methodology.analysis_methods)}")
+
+# Display key findings
+print(f"\nKey Findings:")
+for i, result_item in enumerate(result.entities.key_results, 1):
+    print(f"{i}. {result_item.finding}")
+    if result_item.statistical_significance:
+        print(f"   Statistics: {result_item.statistical_significance}")
+```
+
+## Domain-Specific Schemas
+
+### Medical Research Papers
+
+```python
+class ClinicalTrialSchema(BaseModel):
+    trial_phase: Optional[str] = Field(description="Clinical trial phase (I, II, III, IV)")
+    participants: int = Field(description="Number of study participants")
+    inclusion_criteria: List[str] = Field(description="Patient inclusion criteria")
+    exclusion_criteria: List[str] = Field(description="Patient exclusion criteria")
+    primary_endpoint: str = Field(description="Primary outcome measure")
+    secondary_endpoints: List[str] = Field(description="Secondary outcome measures")
+    adverse_events: List[str] = Field(description="Reported adverse events")
+    ethics_approval: Optional[str] = Field(description="Ethics committee approval details")
+
+class MedicalPaperSchema(ScientificPaperSchema):
+    clinical_trial: Optional[ClinicalTrialSchema] = Field(description="Clinical trial details")
+    medical_keywords: List[str] = Field(description="Medical Subject Headings (MeSH)")
+    patient_population: str = Field(description="Target patient population")
+    interventions: List[str] = Field(description="Medical interventions studied")
+
+medical_extractor = LangStruct(schema=MedicalPaperSchema)
+```
+
+### Computer Science Papers
+
+```python
+class AlgorithmSchema(BaseModel):
+    name: str = Field(description="Algorithm name")
+    complexity: Optional[str] = Field(description="Time/space complexity (Big O notation)")
+    novelty: str = Field(description="Novel contribution or improvement")
+    comparison_baseline: List[str] = Field(description="Algorithms compared against")
+
+class CSPaperSchema(ScientificPaperSchema):
+    algorithms: List[AlgorithmSchema] = Field(description="Algorithms presented")
+    datasets: List[str] = Field(description="Datasets used for evaluation")
+    evaluation_metrics: List[str] = Field(description="Performance metrics")
+    code_availability: Optional[str] = Field(description="Code repository or availability")
+    reproducibility: str = Field(description="Reproducibility information")
+
+cs_extractor = LangStruct(schema=CSPaperSchema)
+```
+
+### Environmental Science Papers
+
+```python
+class EnvironmentalDataSchema(BaseModel):
+    location: str = Field(description="Study location or geographic area")
+    time_period: str = Field(description="Study time period")
+    environmental_variables: List[str] = Field(description="Environmental factors measured")
+    measurement_methods: List[str] = Field(description="Data collection instruments/methods")
+    data_sources: List[str] = Field(description="Data sources (satellites, sensors, surveys)")
+
+class EnvironmentalPaperSchema(ScientificPaperSchema):
+    environmental_data: EnvironmentalDataSchema = Field(description="Environmental study data")
+    ecological_impact: List[str] = Field(description="Ecological implications")
+    policy_implications: List[str] = Field(description="Policy recommendations")
+
+env_extractor = LangStruct(schema=EnvironmentalPaperSchema)
+```
+
+## Literature Review and Meta-Analysis
+
+Extract information for systematic reviews:
+
+```python
+class LiteratureReviewSchema(BaseModel):
+    research_topic: str = Field(description="Main research topic")
+    search_strategy: str = Field(description="Literature search methodology")
+    inclusion_criteria: List[str] = Field(description="Study inclusion criteria")
+    exclusion_criteria: List[str] = Field(description="Study exclusion criteria")
+    studies_included: int = Field(description="Number of studies included")
+    quality_assessment: str = Field(description="Study quality assessment method")
+    synthesis_method: str = Field(description="Data synthesis approach")
+    main_findings: List[str] = Field(description="Key meta-analysis findings")
+    heterogeneity: Optional[str] = Field(description="Study heterogeneity assessment")
+    bias_assessment: List[str] = Field(description="Publication bias assessment")
+
+review_extractor = LangStruct(schema=LiteratureReviewSchema)
+```
+
+## Citation and Reference Analysis
+
+Extract and analyze citation patterns:
+
+```python
+class CitationAnalysisSchema(BaseModel):
+    total_citations: int = Field(description="Total number of citations")
+    self_citations: int = Field(description="Number of self-citations")
+    citation_patterns: List[str] = Field(description="Citation pattern analysis")
+    key_references: List[CitationSchema] = Field(description="Most frequently cited works")
+    citation_recency: str = Field(description="Age distribution of citations")
+    interdisciplinary_scope: List[str] = Field(description="Disciplines of cited works")
+
+def analyze_citations(paper_text: str):
+    citation_extractor = LangStruct(schema=CitationAnalysisSchema)
+    return citation_extractor.extract(paper_text)
+
+# Extract citation patterns
+citation_analysis = analyze_citations(paper_text)
+print(f"Citation Analysis:")
+print(f"Total citations: {citation_analysis.entities.total_citations}")
+print(f"Key reference areas: {citation_analysis.entities.interdisciplinary_scope}")
+```
+
+## Batch Processing for Literature Reviews
+
+Process multiple papers for systematic reviews:
+
+```python
+from pathlib import Path
+
+class LiteratureProcessor:
+    def __init__(self, schema=ScientificPaperSchema):
+        self.extractor = LangStruct(schema=schema)
+        self.citation_analyzer = LangStruct(schema=CitationAnalysisSchema)
+
+    def process_paper_collection(self, papers_folder: Path):
+        """Process a collection of papers for literature review"""
+        paper_files = list(papers_folder.glob("*.txt")) + list(papers_folder.glob("*.pdf"))
+
+        # Prepare documents for batch processing
+        paper_texts = []
+        file_names = []
+
+        for paper_file in paper_files:
+            try:
+                # Read paper content (handle both txt and pdf)
+                if paper_file.suffix == '.pdf':
+                    paper_text = self.extract_pdf_text(paper_file)
+                else:
+                    paper_text = paper_file.read_text(encoding='utf-8')
+
+                paper_texts.append(paper_text)
+                file_names.append(paper_file.name)
+
+            except Exception as e:
+                print(f"Error reading {paper_file}: {e}")
+
+        # Process all papers in batch
+        paper_results = self.extractor.extract(paper_texts)
+        citation_results = self.citation_analyzer.extract(paper_texts)
+
+        # Combine results
+        results = []
+        for i, (paper_data, citation_data) in enumerate(zip(paper_results, citation_results)):
+            results.append({
+                'file': file_names[i],
+                'paper_data': paper_data,
+                'citation_analysis': citation_data,
+                'processed_at': datetime.now()
+            })
+            print(f"Processed: {file_names[i]}")
+
+        return results
+
+    def extract_pdf_text(self, pdf_path: Path) -> str:
+        """Extract text from PDF files (requires PyPDF2 or similar)"""
+        # Implementation depends on your PDF processing library
+        # Example with PyPDF2:
+        # import PyPDF2
+        # with open(pdf_path, 'rb') as file:
+        #     reader = PyPDF2.PdfReader(file)
+        #     return ''.join([page.extract_text() for page in reader.pages])
+        pass
+
+# Usage for systematic review
+processor = LiteratureProcessor()
+papers = processor.process_paper_collection(Path("./literature_review/"))
+
+# Analyze collected data
+total_papers = len(papers)
+average_citations = sum(p['citation_analysis'].entities.total_citations for p in papers) / total_papers
+common_methods = {}  # Analyze common methodologies across papers
+```
+
+## Research Synthesis and Comparison
+
+Compare methodologies across multiple papers:
+
+```python
+class MethodologyComparisonSchema(BaseModel):
+    common_methods: List[str] = Field(description="Methodologies used across multiple studies")
+    unique_approaches: List[str] = Field(description="Novel or unique methodological approaches")
+    sample_size_range: str = Field(description="Range of sample sizes across studies")
+    geographic_coverage: List[str] = Field(description="Geographic regions covered")
+    temporal_coverage: str = Field(description="Time periods covered across studies")
+    quality_indicators: List[str] = Field(description="Study quality indicators")
+    gaps_identified: List[str] = Field(description="Research gaps identified")
+
+def synthesize_literature(papers_data: List[dict]):
+    """Synthesize findings from multiple papers"""
+    # Combine all paper texts for comparative analysis
+    combined_text = "\n\n--- PAPER SEPARATOR ---\n\n".join([
+        f"PAPER {i+1}: {paper['paper_data'].entities.title}\n{paper['paper_data'].original_text[:2000]}..."
+        for i, paper in enumerate(papers_data)
+    ])
+
+    synthesizer = LangStruct(schema=MethodologyComparisonSchema)
+    return synthesizer.extract(combined_text)
+
+# Perform literature synthesis
+synthesis = synthesize_literature(papers[:10])  # Analyze first 10 papers
+print(f"Common methodologies: {synthesis.entities.common_methods}")
+print(f"Research gaps: {synthesis.entities.gaps_identified}")
+```
+
+## Export and Reporting
+
+Generate comprehensive research analysis reports:
+
+```python
+from langstruct.core.export_utils import ExportUtilities
+import pandas as pd
+
+class ResearchReportGenerator:
+    def generate_literature_review_report(self, papers_data: List[dict], output_path: str):
+        """Generate comprehensive literature review report using LangStruct's export utilities"""
+
+        # Create summary statistics
+        summary_stats = {
+            'total_papers': len(papers_data),
+            'author_count': self.count_unique_authors(papers_data),
+            'methodology_distribution': self.analyze_methodologies(papers_data),
+            'citation_statistics': self.analyze_citations(papers_data)
+        }
+
+        # Export each paper's data to JSON
+        for i, paper in enumerate(papers_data):
+            result = paper['paper_data']
+            ExportUtilities.save_json(result, f"{output_path}_paper_{i:03d}.json")
+
+        # Create DataFrame with paper summaries
+        papers_df = self.create_papers_dataframe(papers_data)
+
+        # Save to CSV (if pandas available)
+        try:
+            papers_df.to_csv(f"{output_path}_papers_summary.csv", index=False)
+            print(f"Literature review data exported:")
+            print(f"  - Individual papers: {output_path}_paper_*.json")
+            print(f"  - Summary: {output_path}_papers_summary.csv")
+        except ImportError:
+            print("Pandas not available for CSV export")
+            print(f"Individual paper data exported to: {output_path}_paper_*.json")
+
+    def create_papers_dataframe(self, papers_data: List[dict]) -> pd.DataFrame:
+        """Create pandas DataFrame from papers data"""
+        rows = []
+        for paper in papers_data:
+            data = paper['paper_data'].entities
+            rows.append({
+                'Title': data.title,
+                'Authors': '; '.join([a.name for a in data.authors]),
+                'Journal': data.publication_info.get('journal', 'N/A'),
+                'Year': data.publication_info.get('year', 'N/A'),
+                'Sample_Size': data.methodology.sample_size if data.methodology else 'N/A',
+                'Study_Design': data.methodology.study_design if data.methodology else 'N/A',
+                'Key_Results_Count': len(data.key_results),
+                'Citations_Count': len(data.citations),
+                'DOI': data.publication_info.get('doi', 'N/A')
+            })
+        return pd.DataFrame(rows)
+
+# Usage
+report_generator = ResearchReportGenerator()
+report_generator.generate_literature_review_report(papers, "climate_change_ml_review")
+```
+
+## Key Benefits
+
+<CardGrid>
+	<Card title="Research Efficiency" icon="rocket">
+		Process hundreds of papers 10x faster than manual review
+	</Card>
+	<Card title="Comprehensive Analysis" icon="document">
+		Extract methodology, results, citations, and key findings systematically
+	</Card>
+	<Card title="Source Tracking" icon="approve-check">
+		Maintain complete traceability to original paper sources
+	</Card>
+	<Card title="Systematic Reviews" icon="random">
+		Perfect for meta-analysis and systematic literature reviews
+	</Card>
+</CardGrid>
+
+## Use Cases
+
+### Academic Researchers
+- **Literature Reviews** - Systematic analysis of research domains
+- **Meta-Analysis** - Extract quantitative data for statistical synthesis
+- **Grant Writing** - Identify research gaps and supporting evidence
+- **Citation Analysis** - Track research impact and influence patterns
+
+### Research Institutions
+- **Research Assessment** - Analyze institutional research output
+- **Collaboration Analysis** - Identify research collaboration patterns
+- **Trend Analysis** - Track emerging research directions
+- **Impact Measurement** - Assess research influence and citations
+
+### Pharmaceutical Companies
+- **Drug Discovery** - Analyze scientific literature for drug targets
+- **Clinical Trial Analysis** - Extract data from clinical research papers
+- **Competitive Intelligence** - Monitor competitor research publications
+- **Regulatory Submissions** - Compile supporting scientific evidence
+
+### Policy Organizations
+- **Evidence Synthesis** - Compile scientific evidence for policy decisions
+- **Research Gaps** - Identify areas needing further research
+- **Expert Identification** - Find leading researchers in specific domains
+- **Technology Assessment** - Analyze scientific basis for new technologies
+
+## Advanced Features
+
+### Custom Academic Prompts
+
+```python
+# Domain-specific prompts for different research areas
+medical_prompt = """
+You are analyzing a medical research paper. Focus on:
+1. Clinical significance and statistical significance
+2. Patient safety and adverse events
+3. Study design quality and potential biases
+4. Generalizability to broader patient populations
+5. Clinical implications and practice recommendations
+6. Regulatory considerations and approval pathways
+"""
+
+medical_extractor = LangStruct(
+    schema=MedicalPaperSchema,
+    system_prompt=medical_prompt,
+    model="gemini/gemini-2.5-flash-lite"
+)
+```
+
+### Quality Assessment Integration
+
+```python
+class StudyQualitySchema(BaseModel):
+    study_quality_score: float = Field(description="Overall quality score (0-10)")
+    bias_risk: str = Field(description="Risk of bias assessment (low/moderate/high)")
+    methodological_rigor: List[str] = Field(description="Methodological strengths")
+    limitations: List[str] = Field(description="Study limitations and weaknesses")
+    reproducibility_score: float = Field(description="Reproducibility assessment (0-10)")
+    ethical_considerations: str = Field(description="Ethical approval and considerations")
+
+quality_assessor = LangStruct(schema=StudyQualitySchema)
+```
+
+## Next Steps
+
+Ready to start analyzing scientific literature?
+
+- **[Installation](/installation/)** - Set up LangStruct for academic research
+- **[Optimization](/optimization/)** - Improve accuracy for your research domain
+- **[Source Grounding](/source-grounding/)** - Track information back to original papers
+- **[Batch Processing](/)** - Process large literature collections efficiently
+
+<CardGrid>
+	<Card title="Start with Examples" icon="laptop">
+		Try the sample schemas with your research papers
+	</Card>
+	<Card title="Customize for Your Field" icon="setting">
+		Adapt schemas for your specific research domain
+	</Card>
+	<Card title="Build Review Workflows" icon="approve-check">
+		Create systematic review and quality assessment processes
+	</Card>
+	<Card title="Scale Your Research" icon="rocket">
+		Process entire research domains with automated analysis
+	</Card>
+</CardGrid>

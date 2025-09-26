@@ -1,0 +1,113 @@
+---
+export interface Props {
+  title: string
+  description?: string
+  code: string
+  language?: string
+  output?: string
+  runnable?: boolean
+}
+
+const { 
+  title, 
+  description, 
+  code, 
+  language = "python", 
+  output, 
+  runnable = false 
+} = Astro.props
+---
+
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+  <!-- Header -->
+  <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+      {title}
+    </h3>
+    {description && (
+      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+        {description}
+      </p>
+    )}
+  </div>
+
+  <!-- Code section -->
+  <div class="relative">
+    <!-- Tab bar -->
+    <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-4 py-2">
+      <div class="flex space-x-1">
+        <div class="px-3 py-1 text-xs font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md border border-gray-200 dark:border-gray-600">
+          {language}
+        </div>
+        {output && (
+          <div class="px-3 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 rounded-md">
+            Output
+          </div>
+        )}
+      </div>
+
+      <!-- Copy button -->
+      <button 
+        class="copy-button inline-flex items-center px-2 py-1 text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+        data-code={code}
+      >
+        <svg class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
+        </svg>
+        Copy
+      </button>
+    </div>
+
+    <!-- Code content -->
+    <div class="bg-gray-900 text-gray-300">
+      <pre class="p-4 overflow-x-auto text-sm"><code class={`language-${language}`}>{code.trim()}</code></pre>
+    </div>
+
+    <!-- Output section -->
+    {output && (
+      <div class="border-t border-gray-600">
+        <div class="bg-gray-800 px-4 py-2">
+          <span class="text-xs font-medium text-green-400">Output:</span>
+        </div>
+        <pre class="bg-gray-900 p-4 text-sm text-green-300 overflow-x-auto"><code>{output.trim()}</code></pre>
+      </div>
+    )}
+
+    <!-- Run button -->
+    {runnable && (
+      <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 border-t border-gray-200 dark:border-gray-600">
+        <button class="btn-primary text-sm">
+          <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 8h6m-6-6h6m2 5.5V5a2 2 0 00-2-2H6a2 2 0 00-2 2v14.5L8 17l4 2.5 4-2.5 4 2.5z"/>
+          </svg>
+          Run Example
+        </button>
+      </div>
+    )}
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Copy functionality
+    document.querySelectorAll('.copy-button').forEach(button => {
+      button.addEventListener('click', async () => {
+        const code = button.getAttribute('data-code');
+        if (code) {
+          try {
+            await navigator.clipboard.writeText(code);
+            const originalText = button.innerHTML;
+            button.innerHTML = `<svg class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>Copied!`;
+            setTimeout(() => {
+              button.innerHTML = originalText;
+            }, 2000);
+          } catch (err) {
+            console.error('Failed to copy code:', err);
+          }
+        }
+      });
+    });
+  });
+</script>

@@ -1,0 +1,54 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Set up Python
+      run: uv python install 3.12
+
+    - name: Install dependencies
+      run: |
+        uv sync --extra dev
+
+    - name: Run black (format check)
+      run: |
+        uv run black --check --diff .
+
+    - name: Run isort (import sorting check)
+      run: |
+        uv run isort --check-only --diff .
+
+    - name: Run mypy (type checking)
+      run: |
+        uv run mypy langstruct/ || echo "Type checking completed with warnings"
+
+    - name: Check for common issues
+      run: |
+        # Check for print statements in production code
+        echo "Checking for print statements in source code..."
+        if grep -r "print(" langstruct/ --exclude-dir=__pycache__ | grep -v "# debug" | grep -v "# testing"; then
+          echo "Found print statements in source code. Please use logging instead."
+          exit 1
+        fi
+        
+        # Check for TODO/FIXME that should be issues
+        echo "Checking for TODO/FIXME comments..."
+        if grep -r "TODO\|FIXME\|XXX\|HACK" langstruct/ --exclude-dir=__pycache__ | wc -l | grep -v "^0$"; then
+          echo "Found TODO/FIXME comments. Consider creating GitHub issues for these."
+          grep -r "TODO\|FIXME\|XXX\|HACK" langstruct/ --exclude-dir=__pycache__ || true
+        fi

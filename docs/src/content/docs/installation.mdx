@@ -1,0 +1,279 @@
+---
+title: Installation Guide
+description: Complete installation guide for LangStruct with all optional dependencies and setup instructions
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+This guide covers everything you need to install and configure LangStruct for your projects.
+
+## System Requirements
+
+<CardGrid>
+	<Card title="Python" icon="seti:python">
+		3.12 or higher
+	</Card>
+	<Card title="Operating System" icon="laptop">
+		Linux, macOS, or Windows
+	</Card>
+	<Card title="Memory" icon="random">
+		2GB RAM minimum (4GB+ recommended)
+	</Card>
+	<Card title="API Access" icon="external">
+		Any LLM provider: Google, OpenAI, Anthropic, Azure, or local servers
+	</Card>
+</CardGrid>
+
+## Basic Installation
+
+Install LangStruct from PyPI using your preferred tooling:
+
+<Tabs>
+  <TabItem label="uv (Recommended)">
+    ```bash
+    uv add langstruct
+    ```
+  </TabItem>
+  <TabItem label="pip">
+    ```bash
+    pip install langstruct
+    ```
+  </TabItem>
+</Tabs>
+
+## Optional Extras
+
+Available extras map to features in this repo:
+
+- `viz` — HTML visualization helpers
+- `examples` — Example integrations (ChromaDB, LangChain)
+- `parallel` — tqdm for progress bars in batch runs
+- `dev` — test/lint/type tooling for contributors
+- `all` — installs everything above
+
+```bash
+pip install "langstruct[viz]"
+pip install "langstruct[examples]"
+pip install "langstruct[parallel]"
+pip install "langstruct[dev]"
+pip install "langstruct[all]"
+```
+
+## API Provider Setup
+
+LangStruct supports **hundreds of models** via DSPy and LiteLLM. Examples include:
+
+- **Cloud APIs**: OpenAI, Google, Anthropic, Azure, AWS Bedrock, Cohere, etc.
+- **Local models**: Ollama, vLLM, LM Studio, GPT4All, etc.
+- **Specialized**: Together AI, Fireworks, Replicate, Hugging Face, etc.
+
+Set up any provider you prefer:
+
+### Google Gemini
+
+```bash
+export GOOGLE_API_KEY="your-google-api-key"
+```
+
+Use any Gemini model: `gemini-2.5-flash-lite`, `gemini-2.5-flash`, `gemini-2.5-pro`, etc.
+
+### OpenAI
+
+```bash
+export OPENAI_API_KEY="your-openai-api-key"
+```
+
+Use any OpenAI model: `gpt-5-pro`, `gpt-5-mini`, `gpt-4o`, etc.
+
+### Anthropic Claude
+
+```bash
+export ANTHROPIC_API_KEY="your-anthropic-api-key"
+```
+
+Use any Claude model: `claude-opus-4-1`, `claude-sonnet-4-0`, `claude-3-7-sonnet-latest`, `claude-3-5-haiku-latest`, etc.
+
+### Azure OpenAI
+
+```bash
+export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
+export AZURE_OPENAI_API_KEY="your-azure-api-key"
+export AZURE_OPENAI_API_VERSION="2024-02-01"
+```
+
+### Local Models
+
+LangStruct works with local models via:
+
+#### Ollama
+
+```bash
+# Install Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Pull a model
+ollama pull llama2
+
+# Use in LangStruct
+export OLLAMA_BASE_URL="http://localhost:11434"
+```
+
+#### vLLM
+
+```bash
+# Install vLLM
+pip install vllm
+
+# Start vLLM server
+python -m vllm.entrypoints.openai.api_server \
+  --model microsoft/DialoGPT-medium \
+  --port 8000
+```
+
+## Environment Configuration
+
+<Tabs>
+  <TabItem label="Environment Variables">
+    ```bash
+    # Choose your preferred provider
+    export GOOGLE_API_KEY="your-google-api-key"        # Google Gemini
+    export OPENAI_API_KEY="sk-..."                     # OpenAI
+    export OPENAI_ORG_ID="org-..."                     # Optional
+    export ANTHROPIC_API_KEY="sk-ant-..."              # Anthropic Claude
+
+    # LangStruct configuration
+    export LANGSTRUCT_DEFAULT_MODEL="your-preferred-model"
+    export LANGSTRUCT_CACHE_DIR="~/.langstruct"
+    export LANGSTRUCT_LOG_LEVEL="INFO"
+    ```
+  </TabItem>
+  <TabItem label=".env File">
+    Create a `.env` file in your project root:
+    ```env
+    # Add your preferred provider's API key
+    GOOGLE_API_KEY=your-google-api-key
+    OPENAI_API_KEY=sk-your-key-here
+    ANTHROPIC_API_KEY=sk-ant-your-key-here
+    LANGSTRUCT_DEFAULT_MODEL=your-preferred-model
+    ```
+  </TabItem>
+</Tabs>
+
+## Verification
+
+Test your installation:
+
+```python
+import langstruct
+
+# Check version
+print(f"LangStruct version: {langstruct.__version__}")
+
+# Test basic functionality
+from pydantic import BaseModel, Field
+from langstruct import LangStruct
+
+class TestSchema(BaseModel):
+    message: str = Field(description="A simple message")
+
+# This will test your API connection (uses your default model)
+extractor = LangStruct(schema=TestSchema)
+result = extractor.extract("Hello, LangStruct!")
+
+print(f"Success! Extracted: {result.entities}")
+```
+
+## Troubleshooting
+
+### Common Issues
+
+#### Import Errors
+
+```bash
+# If you get import errors, reinstall with dependencies
+pip uninstall langstruct
+pip install langstruct[all]
+```
+
+#### API Key Issues
+
+```python
+# Test your Google API key
+from google import genai
+client = genai.Client()  # Uses GOOGLE_API_KEY
+response = client.models.list()
+print("Google Gemini connection successful")
+
+# Or test OpenAI
+import openai
+client = openai.OpenAI()  # Uses OPENAI_API_KEY
+response = client.models.list()
+print("OpenAI connection successful")
+```
+
+#### Permission Errors
+
+```bash
+# Use user installation if needed
+pip install --user langstruct
+
+# Or use virtual environment (recommended)
+python -m venv langstruct-env
+source langstruct-env/bin/activate  # On Windows: langstruct-env\Scripts\activate
+pip install langstruct
+```
+
+### Performance Tips
+
+- Use `max_workers` for concurrency and `rate_limit` to respect provider quotas
+- Enable `show_progress=True` (requires `langstruct[parallel]`) for batch operations
+- Use refinement (`refine=True`) when accuracy matters most (higher cost)
+
+## Development Installation
+
+For contributing or development:
+
+```bash
+# Clone repository
+git clone https://github.com/langstruct/langstruct.git
+cd langstruct
+
+# Install in development mode
+uv sync --dev
+
+# Or with pip
+pip install -e ".[dev,test]"
+
+# Run tests
+pytest
+
+# Run linting
+ruff check .
+mypy src/
+```
+
+## Containerization
+
+Use any Python base image and install from PyPI or from source control. Ensure API keys are provided via environment variables.
+
+## Next Steps
+
+Now that LangStruct is installed:
+
+<CardGrid>
+	<Card title="Quick Start" icon="rocket">
+		[Build your first extractor](/quickstart/)
+	</Card>
+	<Card title="Basic Usage" icon="open-book">
+		[Learn the fundamentals](/basic-usage/)
+	</Card>
+	<Card title="Examples" icon="document">
+		[See real-world applications](/examples/)
+	</Card>
+	<Card title="API Reference" icon="information">
+		[Explore all available features](/api/)
+	</Card>
+</CardGrid>
+
+Need help? Check our [troubleshooting guide](/troubleshooting/) or ask in [GitHub Discussions](https://github.com/langstruct/langstruct/discussions).

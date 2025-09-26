@@ -1,0 +1,264 @@
+---
+title: Getting Started
+description: Install and start extracting structured data with LangStruct
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Prerequisites
+
+<Card title="⚠️ API Key Required" icon="warning">
+	**You need an API key before you can use LangStruct.** Choose the option that works best for you:
+</Card>
+
+<CardGrid>
+	<Card title="Google Gemini" icon="approve-check">
+		- **Free tier** with generous limits
+		- Fast and reliable
+		- **[Get free key →](https://aistudio.google.com/app/apikey)**
+		- `export GOOGLE_API_KEY="your-key"`
+	</Card>
+	<Card title="OpenAI" icon="document">
+		- Latest models (GPT-4o, o1)
+		- Paid service
+		- **[Get key →](https://platform.openai.com/api-keys)**
+		- `export OPENAI_API_KEY="sk-your-key"`
+	</Card>
+	<Card title="Anthropic" icon="document">
+		- Claude models
+		- Paid service
+		- **[Get key →](https://console.anthropic.com/)**
+		- `export ANTHROPIC_API_KEY="sk-ant-key"`
+	</Card>
+	<Card title="Local (Ollama)" icon="laptop">
+		- **Completely free**
+		- Runs on your machine
+		- **[Install Ollama →](https://ollama.ai/)**
+		- No API key needed
+	</Card>
+</CardGrid>
+
+## Installation
+
+```bash
+pip install "langstruct[examples]"
+```
+
+## Basic Extraction
+
+```python
+from langstruct import LangStruct
+
+# Define schema by example
+extractor = LangStruct(example={
+    "company": "Apple Inc.",
+    "revenue": 125.3,
+    "quarter": "Q3 2024"
+})
+
+# Extract from text
+text = "Apple reported $125.3B revenue in Q3 2024..."
+result = extractor.extract(text)
+
+print(result.entities)
+# {'company': 'Apple Inc.', 'revenue': 125.3, 'quarter': 'Q3 2024'}
+
+print(result.sources)  # Character-level source tracking
+# {'company': [CharSpan(0, 5, 'Apple')], ...}
+
+# Boost accuracy with refinement
+refined_result = extractor.extract(text, refine=True)
+print(f"Confidence: {refined_result.confidence:.1%}")  # Higher confidence
+```
+
+## Query Parsing for RAG
+
+```python
+from langstruct import LangStruct
+
+# Same instance for both extraction and parsing
+ls = LangStruct(example={
+    "company": "Apple Inc.",
+    "revenue": 125.3,
+    "quarter": "Q3 2024"
+})
+
+# Parse natural language query
+query = "Q3 2024 tech companies over $100B discussing AI"
+result = ls.query(query)
+
+print(result.semantic_terms)
+# ['tech companies', 'AI', 'artificial intelligence']
+
+print(result.structured_filters)
+# {'quarter': 'Q3 2024', 'revenue': {'$gte': 100.0}}
+```
+
+## Complete RAG Pipeline
+
+```python
+from langstruct import LangStruct
+from chromadb import Client
+
+# 1. Single instance for both operations
+ls = LangStruct(example={
+    "company": "Apple",
+    "revenue": 100.0,
+    "quarter": "Q3"
+})
+vector_db = Client().create_collection("docs")
+
+# 2. Index documents with metadata
+def index_document(text):
+    metadata = ls.extract(text).entities
+    vector_db.add(texts=[text], metadatas=[metadata])
+
+# 3. Query with natural language
+def search(query):
+    parsed = ls.query(query)
+    return vector_db.query(
+        query_texts=parsed.semantic_terms,
+        where=parsed.structured_filters,
+        n_results=5
+    )
+
+# Usage
+index_document("Apple reported $125B in Q3 2024...")
+results = search("Q3 tech companies over $100B")
+# Returns only Apple, not other Q3 mentions
+```
+
+## Multiple Examples
+
+```python
+# Better type inference from multiple examples
+examples = [
+    {"name": "Alice", "age": 25, "skills": ["Python"]},
+    {"name": "Bob", "age": 35, "skills": ["JavaScript", "React"]}
+]
+
+extractor = LangStruct(examples=examples)
+# Infers: name=str, age=int, skills=List[str]
+```
+
+## Custom Schemas
+
+```python
+from pydantic import BaseModel, Field
+from typing import List, Optional
+
+class CompanySchema(BaseModel):
+    name: str
+    revenue: float = Field(gt=0, description="Revenue in billions")
+    employees: Optional[int] = None
+    products: List[str] = []
+
+extractor = LangStruct(schema=CompanySchema)
+```
+
+## Model Configuration
+
+```python
+# Default: Auto-detects available models
+extractor = LangStruct(example=schema)
+
+# Specific model
+extractor = LangStruct(
+    example=schema,
+    model="gpt-5-mini"  # Example latest OpenAI model
+)
+
+# Local with Ollama
+extractor = LangStruct(
+    example=schema,
+    model="ollama/llama3.2"
+)
+```
+
+## Batch Processing, Rate Limits & Retries
+
+```python
+# Process multiple documents efficiently
+documents = [doc1, doc2, doc3, ...]
+results = extractor.extract(documents, max_workers=8, show_progress=True)
+
+for result in results:
+    print(f"Confidence: {result.confidence:.1%}")
+    print(f"Entities: {result.entities}")
+
+# Batch processing with refinement for higher accuracy
+results = extractor.extract(
+  documents,
+  refine=True,
+  max_workers=5,
+  rate_limit=60,    # calls per minute
+  retry_failed=True # raise on failures (False to skip with warnings)
+)
+# Note: 2-5x higher cost but significantly better accuracy
+```
+
+## Source Tracking
+
+```python
+result = extractor.extract(text)
+
+# See exactly where each value came from
+for field, spans in result.sources.items():
+    for span in spans:
+        print(f"{field}: '{text[span.start:span.end]}' at {span.start}-{span.end}")
+```
+
+## Save & Load Extractors
+
+```python
+# Save an extractor (preserves all state)
+extractor.save("./my_extractor")
+
+# Load anywhere (API keys must be available)
+loaded_extractor = LangStruct.load("./my_extractor")
+
+# Works exactly like the original
+result = loaded_extractor.extract("New text")
+```
+
+## Export & Visualization
+
+```python
+# Save individual result
+result.save_json("output.json")
+
+# Export batch results
+extractor.export_batch(results, "output.csv")  # csv/json/excel/parquet
+
+# JSONL round‑trip
+extractor.save_annotated_documents(results, "extractions.jsonl")
+loaded = extractor.load_annotated_documents("extractions.jsonl")
+extractor.visualize(loaded, "results.html")
+```
+
+## Performance Tips
+
+- Choose models that fit your speed/cost/quality needs
+- Batch documents with `max_workers`; respect quotas with `rate_limit`
+- Use refinement for accuracy‑sensitive workloads (higher cost)
+
+## Next Steps
+
+<CardGrid>
+	<Card title="Save & Load" icon="document">
+		[Persist extractors for deployment](/persistence/)
+	</Card>
+	<Card title="Refinement" icon="star">
+		[Boost accuracy with refinement](/refinement/)
+	</Card>
+	<Card title="RAG Integration" icon="rocket">
+		[Enhance your RAG system](/rag-integration/)
+	</Card>
+	<Card title="Query Parsing" icon="magnifier">
+		[Parse natural language queries](/query-parsing/)
+	</Card>
+	<Card title="Examples" icon="open-book">
+		[Real-world code examples](/examples/)
+	</Card>
+</CardGrid>

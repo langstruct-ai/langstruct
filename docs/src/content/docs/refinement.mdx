@@ -1,0 +1,347 @@
+---
+title: Refinement
+description: Boost extraction accuracy with Best-of-N and iterative refinement
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Get better extraction results with LangStruct's automatic refinement system. No reward functions or complex setup required - just add `refine=True` for improved accuracy.
+
+## What is Refinement?
+
+Refinement uses **Best-of-N candidate selection** and **iterative improvement** to automatically find the highest quality extractions:
+
+<CardGrid>
+	<Card title="Best-of-N" icon="star">
+		Generate multiple extraction candidates and pick the best one using built-in scoring
+	</Card>
+	<Card title="Iterative Refine" icon="magnifier">
+		Automatically fix issues like missing fields or incorrect values
+	</Card>
+	<Card title="Built-in Judging" icon="approve-check">
+		No reward functions needed - uses schema + source tracking for scoring
+	</Card>
+</CardGrid>
+
+## Simple Usage
+
+**Turn on refinement with one parameter:**
+
+```python
+from langstruct import LangStruct
+
+extractor = LangStruct(example={
+    "invoice_number": "INV-001",
+    "amount": 1250.00,
+    "due_date": "2024-03-15"
+})
+
+# Basic extraction
+result = extractor.extract(text)
+
+# With refinement - higher accuracy
+result = extractor.extract(text, refine=True)
+```
+
+**Or set as default behavior:**
+
+```python
+# Always use refinement
+extractor = LangStruct(
+    example={"name": "John", "age": 25}, 
+    refine=True
+)
+
+result = extractor.extract(text)  # Automatically refined
+```
+
+## Accuracy Improvement Examples
+
+Real examples showing refinement impact:
+
+### Medical Records
+
+<Tabs>
+  <TabItem label="Without Refinement">
+```json
+{
+  "patient": "John", // Missing last name
+  "age": null,       // Missed the age
+  "diagnosis": "diabetes type 2"
+}
+```
+  </TabItem>
+  <TabItem label="With Refinement">
+```json
+{
+  "patient": "John Smith",     // Complete name
+  "age": 45,                   // Found the age
+  "diagnosis": "Type 2 diabetes" // Proper capitalization
+}
+```
+  </TabItem>
+</Tabs>
+
+### Financial Documents
+
+<Tabs>
+  <TabItem label="Without Refinement">
+```json
+{
+  "invoice_number": "12345",    // Missing prefix
+  "amount": 1250,               // Wrong decimal
+  "due_date": "March 15"        // Incomplete date
+}
+```
+  </TabItem>
+  <TabItem label="With Refinement">
+```json
+{
+  "invoice_number": "INV-12345", // Complete number
+  "amount": 1250.00,              // Correct decimal
+  "due_date": "2024-03-15"        // Full ISO date
+}
+```
+  </TabItem>
+</Tabs>
+
+## Advanced Configuration
+
+### Strategy Options
+
+Choose the refinement approach that fits your needs:
+
+```python
+# Best-of-N only (fastest)
+result = extractor.extract(text, refine={
+    "strategy": "bon",
+    "n_candidates": 5
+})
+
+# Iterative refinement only
+result = extractor.extract(text, refine={
+    "strategy": "refine",
+    "max_refine_steps": 2
+})
+
+# Combined approach (highest accuracy)
+result = extractor.extract(text, refine={
+    "strategy": "bon_then_refine",
+    "n_candidates": 5,
+    "max_refine_steps": 2
+})
+```
+
+### Custom Scoring
+
+**Default scoring** (recommended - no setup needed):
+```python
+result = extractor.extract(text, refine=True)
+# Uses built-in rubric: faithfulness + completeness + source quality
+```
+
+**Custom judge** for domain-specific scoring:
+```python
+result = extractor.extract(text, refine={
+    "judge": "Prefer candidates that extract complete names and exact monetary amounts. Penalize hallucinated values not present in the text."
+})
+```
+
+### Budget Controls
+
+Prevent runaway costs with built-in budget limits:
+
+```python
+from langstruct import Budget
+
+result = extractor.extract(text, refine={
+    "strategy": "bon_then_refine",
+    "n_candidates": 5,
+    "budget": Budget(
+        max_calls=10,      # Max LLM API calls
+        max_tokens=50000   # Max tokens consumed
+    )
+})
+```
+
+Budget exceeded? LangStruct gracefully falls back to the best candidate so far.
+
+## Complete Configuration Example
+
+```python
+from langstruct import LangStruct, Refine, Budget
+
+# Full configuration with all options
+extractor = LangStruct(
+    example={
+        "company": "Apple Inc.",
+        "revenue": 100.0,
+        "quarter": "Q3 2024"
+    },
+    refine=Refine(
+        strategy="bon_then_refine",
+        n_candidates=5,
+        judge="Prefer candidates that exactly match financial figures and company names from the text",
+        max_refine_steps=2,
+        temperature=0.7,
+        budget=Budget(max_calls=10)
+    )
+)
+
+result = extractor.extract(text)
+
+# Check refinement metadata
+print(f"Strategy used: {result.metadata['refinement_strategy']}")
+print(f"Candidates generated: {result.metadata['candidates_generated']}")
+print(f"Refinement steps: {result.metadata['refinement_steps']}")
+```
+
+## Performance & Cost Impact
+
+<CardGrid>
+	<Card title="Accuracy Gain" icon="star">
+		Improved field completeness and accuracy through multiple candidates
+	</Card>
+	<Card title="Speed Impact" icon="information">
+		**2-5x slower** due to multiple LLM calls (use budget limits)
+	</Card>
+	<Card title="Cost Impact" icon="warning">
+		**2-5x higher** token usage (varies by strategy and candidates)
+	</Card>
+	<Card title="When to Use" icon="laptop">
+		High-value extractions, production pipelines, quality-critical applications
+	</Card>
+</CardGrid>
+
+## When to Use Refinement
+
+### ✅ Great for:
+- **Production pipelines** where accuracy matters more than speed
+- **Complex documents** with subtle extraction requirements  
+- **High-value data** where errors are costly
+- **Quality-critical applications** like medical or financial systems
+- **Difficult extraction tasks** where basic extraction struggles
+
+### ⚠️ Consider alternatives for:
+- **Batch processing** thousands of documents (cost adds up)
+- **Real-time applications** requiring sub-second responses
+- **Simple extraction tasks** that already work well
+- **Development/prototyping** where speed matters more than perfection
+
+## Integration with Other Features
+
+### With Batch Processing
+
+```python
+documents = [doc1, doc2, doc3]
+
+# Refinement applied to each document
+results = extractor.extract(documents, refine=True)
+
+# Or with budget control for large batches
+results = extractor.extract(documents, refine={
+    "n_candidates": 3,  # Fewer candidates for batches
+    "budget": Budget(max_calls=50)  # Total budget for all docs
+})
+```
+
+### With Optimization
+
+Refinement works alongside DSPy optimization:
+
+```python
+# 1. Create and optimize extractor
+extractor = LangStruct(example=schema)
+extractor.optimize(training_texts, expected_results)
+
+# 2. Use refined extraction on new data
+result = extractor.extract(new_text, refine=True)
+# Gets benefits of BOTH optimization AND refinement
+```
+
+### With RAG Systems
+
+```python
+# Enhanced RAG with refinement
+def enhanced_rag_extract(document):
+    metadata = extractor.extract(document, refine={
+        "strategy": "bon",
+        "n_candidates": 3
+    }).entities
+    
+    # Higher quality metadata = better RAG retrieval
+    vector_store.add(texts=[document], metadatas=[metadata])
+```
+
+## Refinement Trace & Debugging
+
+Understand what refinement is doing:
+
+```python
+result = extractor.extract(text, refine=True)
+
+# Inspect refinement metadata
+trace = result.metadata
+print(f"Candidates generated: {trace['candidates_generated']}")
+print(f"Chosen candidate: {trace.get('chosen_candidate', 0)}")
+print(f"Refinement steps: {trace['refinement_steps']}")
+print(f"Budget used: {trace['refinement_budget_used']}")
+
+# Check if refinement was applied
+if trace.get('refinement_applied'):
+    print(f"Strategy: {trace['refinement_strategy']}")
+else:
+    print("Refinement was skipped (budget/config)")
+```
+
+## Best Practices
+
+<CardGrid>
+	<Card title="Start Simple" icon="rocket">
+		Begin with `refine=True` - built-in scoring handles most cases
+	</Card>
+	<Card title="Budget Everything" icon="document">
+		Always set budget limits for cost control, especially in production
+	</Card>
+	<Card title="Test on Real Data" icon="approve-check">
+		Measure accuracy improvements on your actual documents
+	</Card>
+	<Card title="Monitor Costs" icon="warning">
+		Track token usage - refinement significantly increases API costs
+	</Card>
+</CardGrid>
+
+## Troubleshooting
+
+**Q: Refinement is too slow**  
+A: Use `strategy="bon"` with fewer candidates, or set lower budget limits
+
+**Q: Refinement is too expensive**  
+A: Set `Budget(max_calls=5)` or use refinement only for high-value extractions
+
+**Q: Not seeing accuracy improvements**  
+A: Your base extraction may already be very good, or try custom judge rubrics
+
+**Q: Budget always exceeded**  
+A: Increase limits or use simpler strategy like `"bon"` instead of `"bon_then_refine"`
+
+**Q: Can I use refinement with custom models?**  
+A: Yes! Works with any DSPy-supported model (OpenAI, Anthropic, Gemini, Ollama, etc.)
+
+## Next Steps
+
+<CardGrid>
+	<Card title="Try It Now" icon="laptop">
+		Add `refine=True` to your existing extractor
+	</Card>
+	<Card title="Examples" icon="open-book">
+		[See refinement in action](/examples/)
+	</Card>
+	<Card title="Optimization" icon="star">
+		[Combine with optimization for best results](/optimization/)
+	</Card>
+	<Card title="Batch Processing" icon="document">
+		[Scale refinement with batching](/getting-started/#batch-processing)
+	</Card>
+</CardGrid>

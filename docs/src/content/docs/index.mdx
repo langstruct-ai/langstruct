@@ -1,0 +1,117 @@
+---
+title: LLM-Powered Structured Data Extraction
+description: Extract structured data from any text – no prompt engineering required
+hero:
+  title: LangStruct
+  tagline: Turn unstructured text into clean, typed data. No prompt engineering, just examples and automatic optimization.
+  image:
+    file: ../../assets/hero.svg
+  actions:
+    - text: Get Started
+      link: /quickstart/
+      icon: right-arrow
+      variant: primary
+    - text: GitHub
+      link: https://github.com/langstruct-ai/langstruct
+      icon: github
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+```python
+from langstruct import LangStruct
+
+# Define what you want to extract with a simple example
+extractor = LangStruct(example={
+    "patient_name": "John Doe",
+    "diagnosis": "Type 2 Diabetes",
+    "medication": "metformin",
+    "dosage": "500mg"
+})
+
+# Extract from any unstructured text
+text = "Patient John Smith diagnosed with hypertension, prescribed lisinopril 10mg daily."
+result = extractor.extract(text)
+
+print(result.entities)
+# {"patient_name": "John Smith", "diagnosis": "hypertension",
+#  "medication": "lisinopril", "dosage": "10mg"}
+
+print(result.sources)  # Know exactly where each value came from
+# {"patient_name": [CharSpan(8, 18, "John Smith")], ...}
+```
+
+## Why LangStruct
+
+<CardGrid>
+	<Card title="No Prompt Engineering" icon="star">
+		DSPy automatically optimizes prompts for accuracy. Focus on your data, not prompts.
+	</Card>
+	<Card title="Model Portability" icon="setting">
+		Switch between any LLM (OpenAI, Claude, Gemini, local) and auto-reoptimize instantly.
+	</Card>
+	<Card title="Source Attribution" icon="document">
+		Know exactly where each extracted value came from in the original text.
+	</Card>
+	<Card title="Future-Proof" icon="rocket">
+		Never rewrite prompts when new models emerge - just change one line and re-optimize.
+	</Card>
+</CardGrid>
+
+## When to Use LangStruct
+
+**Perfect for:**
+- **Document processing**: Invoices, medical records, legal contracts, reports
+- **Data pipelines**: Converting unstructured text to database records
+- **RAG enhancement**: Adding structured filters to semantic search
+- **Compliance**: Extracting required fields with source attribution
+- **Research**: Processing papers, patents, technical documents
+
+**Not ideal for:**
+- Simple pattern matching (use regex instead)
+- When you have thousands of labeled examples (train a classifier)
+- Sub-100ms latency requirements (LLM calls take time)
+- Streaming/real-time extraction needs
+
+## Limitations
+
+- **DSPy dependency**: Built on DSPy 3.0 for automatic prompt optimization
+- **Optimization cost**: Initial optimization requires 50-100 example calls
+- **LLM costs**: Each extraction is an LLM call (use caching)
+- **No streaming**: Extracts complete documents only
+- **Context limits**: Large documents need chunking
+
+## Comparison
+
+### LangStruct vs LangExtract
+
+| Feature | LangStruct | LangExtract |
+|---------|------------|-------------|
+| **Optimization** | ✅ Automatic (DSPy MIPROv2) | ⚠️ Manual prompts/examples |
+| **Refinement** | ✅ Best-of-N + iterative improvement | ⚠️ Multi-pass extraction; no Best-of-N/judge pipeline |
+| **Schema Definition** | ✅ From examples OR Pydantic | ⚠️ Prompt + examples (no Pydantic models) |
+| **Source Grounding** | ✅ Character-level tracking | ✅ Character-level tracking |
+| **Confidence Scores** | ✅ Built-in | ⚠️ Not surfaced as scores |
+| **Query Parsing** | ✅ Bidirectional (docs + queries) | ❌ Documents only |
+| **Model Support** | ✅ Any LLM (via DSPy/LiteLLM) | ✅ Gemini, OpenAI, local via Ollama; extensible |
+| **Learning Curve** | ✅ Simple (example-based) | ⚠️ Requires prompt + example design |
+| **Performance** | ✅ Self-optimizing | ⚠️ Depends on manual tuning |
+| **Project Type** | Community open-source | Google open-source |
+
+_Comparison verified on 2025-09-10 against the latest LangExtract docs._
+See LangExtract: https://github.com/google/langextract and example walkthroughs such as
+https://github.com/google/langextract/blob/main/docs/examples/longer_text_example.md.
+
+## Installation
+
+```bash
+pip install langstruct
+
+# Set up any API key (choose one):
+export OPENAI_API_KEY="sk-your-key"        # OpenAI
+export GOOGLE_API_KEY="your-key"           # Google Gemini
+export ANTHROPIC_API_KEY="sk-ant-key"      # Claude models
+# Or use local models with Ollama (no API key needed)
+```
+
+**Links:** [Documentation](/quickstart/) | [GitHub](https://github.com/langstruct-ai/langstruct) | [Examples](/examples/)

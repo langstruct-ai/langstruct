@@ -1,0 +1,659 @@
+---
+title: Financial Document Processing
+description: Extract financial metrics, dates, and key information from earnings reports, financial statements, and regulatory filings
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Learn how to extract structured financial data from earnings reports, SEC filings, financial statements, and other financial documents with high accuracy and regulatory compliance.
+
+## Quick Start: Simple Financial Extraction
+
+Start with a basic example to get familiar with financial data extraction:
+
+```python
+from langstruct import LangStruct
+
+# Create a simple financial extractor from an example
+extractor = LangStruct(example={
+    "company": "Apple Inc",
+    "revenue": 81.8,  # in billions
+    "net_income": 14.7,
+    "quarter": "Q1 2024"
+})
+
+# Extract from a simple earnings snippet
+text = """
+Apple Inc. reported strong Q1 2024 results with revenue of $81.8 billion
+and net income of $14.7 billion, exceeding analyst expectations.
+"""
+
+result = extractor.extract(text)
+print(result.entities)
+# {'company': 'Apple Inc', 'revenue': 81.8, 'net_income': 14.7, 'quarter': 'Q1 2024'}
+```
+
+## Comprehensive Financial Schema
+
+For production use, define detailed schemas for financial data extraction:
+
+```python
+from pydantic import BaseModel, Field
+from langstruct import LangStruct
+from typing import List, Optional, Dict
+from datetime import datetime
+
+class FinancialMetricsSchema(BaseModel):
+    revenue: Optional[float] = Field(
+        description="Total revenue in millions USD"
+    )
+    net_income: Optional[float] = Field(
+        description="Net income/profit in millions USD"
+    )
+    gross_margin: Optional[float] = Field(
+        description="Gross margin as percentage"
+    )
+    operating_margin: Optional[float] = Field(
+        description="Operating margin as percentage"
+    )
+    ebitda: Optional[float] = Field(
+        description="EBITDA in millions USD"
+    )
+    eps: Optional[float] = Field(
+        description="Earnings per share in USD"
+    )
+
+class FinancialReportSchema(BaseModel):
+    company_name: str = Field(
+        description="Full company name"
+    )
+    ticker_symbol: Optional[str] = Field(
+        description="Stock ticker symbol"
+    )
+    report_period: str = Field(
+        description="Reporting period (e.g., Q3 2024, FY 2023)"
+    )
+    report_date: Optional[str] = Field(
+        description="Report publication date"
+    )
+
+    # Financial metrics
+    current_metrics: FinancialMetricsSchema = Field(
+        description="Current period financial metrics"
+    )
+    previous_metrics: Optional[FinancialMetricsSchema] = Field(
+        description="Previous period comparison metrics"
+    )
+
+    # Key highlights
+    key_highlights: List[str] = Field(
+        description="Key business highlights and achievements"
+    )
+    business_outlook: Optional[str] = Field(
+        description="Management guidance and future outlook"
+    )
+    risks_concerns: List[str] = Field(
+        description="Risk factors and concerns mentioned"
+    )
+
+    # Segment performance
+    segment_performance: Optional[Dict[str, float]] = Field(
+        description="Revenue breakdown by business segment"
+    )
+
+    # Geographic breakdown
+    geographic_revenue: Optional[Dict[str, float]] = Field(
+        description="Revenue breakdown by geographic region"
+    )
+```
+
+## Earnings Report Extraction
+
+Extract key information from quarterly earnings reports:
+
+<Tabs>
+  <TabItem label="Basic Extraction">
+    ```python
+    # Create specialized financial document extractor
+    financial_extractor = LangStruct(
+        schema=FinancialReportSchema,
+        model="gemini/gemini-2.5-flash-lite"  # Fast and cost-effective for financial data
+        # Source grounding enabled by default, optimization can be enabled if needed
+    )
+
+    # Sample earnings report text
+    earnings_report = """
+    Apple Inc. (NASDAQ: AAPL) Fiscal Q4 2024 Results
+
+    Cupertino, California — October 31, 2024 — Apple today announced financial
+    results for its fiscal 2024 fourth quarter ended September 28, 2024.
+
+    Fourth Quarter Highlights:
+    - Total net sales of $94.9 billion, up 6% year-over-year
+    - iPhone revenue of $46.2 billion, up 5.5% year-over-year
+    - Services revenue reached record $24.2 billion, up 12% year-over-year
+    - Net income of $23.3 billion, or $1.46 per diluted share
+    - Generated $27.5 billion in operating cash flow
+
+    "We are pleased with our performance in Q4, driven by strong iPhone 15 adoption
+    and continued growth in our Services business," said Tim Cook, Apple's CEO.
+    "Our focus on innovation and customer experience continues to drive results."
+
+    Geographic Revenue Breakdown:
+    - Americas: $41.7 billion (44% of total revenue)
+    - Europe: $24.9 billion (26% of total revenue)
+    - Greater China: $15.0 billion (16% of total revenue)
+    - Japan: $7.4 billion (8% of total revenue)
+    - Rest of Asia Pacific: $5.9 billion (6% of total revenue)
+
+    Business Segment Performance:
+    - iPhone: $46.2 billion
+    - Mac: $7.0 billion
+    - iPad: $6.9 billion
+    - Wearables, Home and Accessories: $9.0 billion
+    - Services: $24.2 billion
+
+    Gross margin for the quarter was 46.2%, compared to 45.2% in the prior year.
+    Operating margin was 30.7%, compared to 29.8% in the prior year.
+
+    Looking ahead, we expect continued growth in Services and are excited about
+    our product pipeline for 2025. However, we remain cautious about
+    macroeconomic headwinds and supply chain challenges.
+
+    Risk factors include potential regulatory changes, competition in key markets,
+    and foreign exchange rate fluctuations.
+    """
+
+    # Extract financial information
+    result = financial_extractor.extract(earnings_report)
+    ```
+  </TabItem>
+  <TabItem label="Processing Results">
+    ```python
+    print("=== Financial Report Analysis ===")
+    print(f"Company: {result.entities['company_name']}")
+    print(f"Ticker: {result.entities['ticker_symbol']}")
+    print(f"Period: {result.entities['report_period']}")
+    print(f"Report Date: {result.entities['report_date']}")
+
+    print(f"\n=== Current Period Metrics ===")
+    current = result.entities['current_metrics']
+    print(f"Revenue: {current['revenue']:.1f}B")
+    print(f"Net Income: {current['net_income']:.1f}B")
+    print(f"EPS: {current['eps']:.2f}")
+    print(f"Gross Margin: {current['gross_margin']:.1f}%")
+    print(f"Operating Margin: {current['operating_margin']:.1f}%")
+
+    print(f"\n=== Key Highlights ===")
+    for i, highlight in enumerate(result.entities['key_highlights'], 1):
+        print(f"{i}. {highlight}")
+
+    print(f"\n=== Business Segments ===")
+    segments = result.entities.get('segment_performance', {})
+    for segment, revenue in segments.items():
+        print(f"{segment}: {revenue:.1f}B")
+
+    print(f"\n=== Geographic Revenue ===")
+    geographic = result.entities.get('geographic_revenue', {})
+    for region, revenue in geographic.items():
+        print(f"{region}: {revenue:.1f}B")
+
+    print(f"\n=== Outlook & Risks ===")
+    print(f"Outlook: {result.entities.get('business_outlook', 'N/A')}")
+    print(f"Risk Factors:")
+    for risk in result.entities.get('risks_concerns', []):
+        print(f"  • {risk}")
+
+    print(f"\nExtraction Confidence: {result.confidence:.2f}")
+    ```
+  </TabItem>
+</Tabs>
+
+**Expected Output:**
+```
+=== Financial Report Analysis ===
+Company: Apple Inc.
+Ticker: AAPL
+Period: Q4 2024
+Report Date: October 31, 2024
+
+=== Current Period Metrics ===
+Revenue: $94.9B
+Net Income: $23.3B
+EPS: $1.46
+Gross Margin: 46.2%
+Operating Margin: 30.7%
+
+=== Key Highlights ===
+1. Total net sales up 6% year-over-year to $94.9 billion
+2. iPhone revenue grew 5.5% to $46.2 billion
+3. Services revenue reached record $24.2 billion, up 12%
+4. Generated $27.5 billion in operating cash flow
+5. Strong iPhone 15 adoption driving growth
+
+=== Business Segments ===
+iPhone: $46.2B
+Services: $24.2B
+Wearables, Home and Accessories: $9.0B
+Mac: $7.0B
+iPad: $6.9B
+
+=== Geographic Revenue ===
+Americas: $41.7B
+Europe: $24.9B
+Greater China: $15.0B
+Japan: $7.4B
+Rest of Asia Pacific: $5.9B
+
+=== Outlook & Risks ===
+Outlook: Expect continued growth in Services and excited about product pipeline for 2025, but cautious about macroeconomic headwinds
+Risk Factors:
+  • Potential regulatory changes
+  • Competition in key markets
+  • Foreign exchange rate fluctuations
+  • Macroeconomic headwinds
+  • Supply chain challenges
+
+Extraction Confidence: 0.93
+```
+
+## SEC Filing Analysis
+
+Process SEC filings like 10-K and 10-Q reports:
+
+```python
+class SECFilingSchema(BaseModel):
+    company_name: str = Field(description="Company name")
+    cik_number: Optional[str] = Field(description="Central Index Key number")
+    filing_type: str = Field(description="Type of filing (10-K, 10-Q, 8-K, etc.)")
+    filing_date: str = Field(description="Filing date")
+    fiscal_period: str = Field(description="Fiscal period covered")
+
+    # Financial position
+    total_assets: Optional[float] = Field(
+        description="Total assets in millions USD"
+    )
+    total_liabilities: Optional[float] = Field(
+        description="Total liabilities in millions USD"
+    )
+    shareholders_equity: Optional[float] = Field(
+        description="Shareholders equity in millions USD"
+    )
+    cash_equivalents: Optional[float] = Field(
+        description="Cash and cash equivalents in millions USD"
+    )
+
+    # Business information
+    business_description: str = Field(
+        description="Description of company's business and operations"
+    )
+    competitive_strengths: List[str] = Field(
+        description="Company's stated competitive advantages"
+    )
+    risk_factors: List[str] = Field(
+        description="Key risk factors identified in filing"
+    )
+
+    # Legal proceedings
+    legal_proceedings: Optional[str] = Field(
+        description="Summary of material legal proceedings"
+    )
+
+    # Management discussion
+    md_a_highlights: List[str] = Field(
+        description="Key points from Management Discussion & Analysis"
+    )
+
+# Process SEC filing
+sec_extractor = LangStruct(schema=SECFilingSchema)
+```
+
+## Financial Ratio Analysis
+
+Calculate and extract financial ratios and metrics:
+
+<Tabs>
+  <TabItem label="Ratio Schema">
+    ```python
+    class FinancialRatiosSchema(BaseModel):
+        # Profitability ratios
+        gross_profit_margin: Optional[float] = Field(
+            description="Gross profit margin percentage"
+        )
+        net_profit_margin: Optional[float] = Field(
+            description="Net profit margin percentage"
+        )
+        return_on_equity: Optional[float] = Field(
+            description="Return on equity percentage"
+        )
+        return_on_assets: Optional[float] = Field(
+            description="Return on assets percentage"
+        )
+
+        # Liquidity ratios
+        current_ratio: Optional[float] = Field(
+            description="Current ratio (current assets / current liabilities)"
+        )
+        quick_ratio: Optional[float] = Field(
+            description="Quick ratio (liquid assets / current liabilities)"
+        )
+
+        # Leverage ratios
+        debt_to_equity: Optional[float] = Field(
+            description="Debt to equity ratio"
+        )
+        debt_to_assets: Optional[float] = Field(
+            description="Debt to assets ratio"
+        )
+
+        # Efficiency ratios
+        asset_turnover: Optional[float] = Field(
+            description="Asset turnover ratio"
+        )
+        inventory_turnover: Optional[float] = Field(
+            description="Inventory turnover ratio"
+        )
+
+        # Raw financial data for calculations
+        revenue: float = Field(description="Total revenue")
+        net_income: float = Field(description="Net income")
+        total_assets: float = Field(description="Total assets")
+        current_assets: float = Field(description="Current assets")
+        current_liabilities: float = Field(description="Current liabilities")
+        total_debt: float = Field(description="Total debt")
+        shareholders_equity: float = Field(description="Shareholders equity")
+    ```
+  </TabItem>
+  <TabItem label="Ratio Calculation">
+    ```python
+    def calculate_additional_ratios(extracted_data):
+        """Calculate ratios that weren't directly extracted"""
+
+        ratios = {}
+
+        # Calculate missing ratios from extracted data
+        if all(key in extracted_data for key in ['net_income', 'revenue']):
+            ratios['calculated_net_margin'] = (extracted_data['net_income'] / extracted_data['revenue']) * 100
+
+        if all(key in extracted_data for key in ['net_income', 'shareholders_equity']):
+            ratios['calculated_roe'] = (extracted_data['net_income'] / extracted_data['shareholders_equity']) * 100
+
+        if all(key in extracted_data for key in ['net_income', 'total_assets']):
+            ratios['calculated_roa'] = (extracted_data['net_income'] / extracted_data['total_assets']) * 100
+
+        if all(key in extracted_data for key in ['current_assets', 'current_liabilities']):
+            ratios['calculated_current_ratio'] = extracted_data['current_assets'] / extracted_data['current_liabilities']
+
+        if all(key in extracted_data for key in ['total_debt', 'shareholders_equity']):
+            ratios['calculated_debt_to_equity'] = extracted_data['total_debt'] / extracted_data['shareholders_equity']
+
+        return ratios
+
+    # Financial statement with ratio information
+    financial_statement = """
+    XYZ Corporation
+    Consolidated Financial Statement
+    Year Ended December 31, 2023
+
+    INCOME STATEMENT
+    Total Revenue: $1,200.5 million
+    Cost of Goods Sold: $720.3 million
+    Gross Profit: $480.2 million (40.0% margin)
+    Operating Income: $240.1 million
+    Net Income: $180.0 million (15.0% net margin)
+
+    BALANCE SHEET
+    Current Assets: $450.0 million
+      - Cash: $120.0 million
+      - Inventory: $180.0 million
+      - Accounts Receivable: $150.0 million
+    Total Assets: $1,800.0 million
+
+    Current Liabilities: $300.0 million
+    Total Debt: $600.0 million
+    Shareholders' Equity: $900.0 million
+
+    FINANCIAL RATIOS
+    - Gross Margin: 40.0%
+    - Net Margin: 15.0%
+    - Current Ratio: 1.50
+    - Quick Ratio: 0.90 (excluding inventory)
+    - Return on Equity: 20.0%
+    - Return on Assets: 10.0%
+    - Debt-to-Equity: 0.67
+    - Asset Turnover: 0.67x
+    """
+
+    ratio_extractor = LangStruct(schema=FinancialRatiosSchema)
+    result = ratio_extractor.extract(financial_statement)
+
+    extracted = result.entities
+
+    print("=== Financial Analysis Report ===")
+    print(f"\n📊 PROFITABILITY RATIOS")
+    print(f"Gross Profit Margin: {extracted.get('gross_profit_margin', 'N/A'):.1f}%")
+    print(f"Net Profit Margin: {extracted.get('net_profit_margin', 'N/A'):.1f}%")
+    print(f"Return on Equity: {extracted.get('return_on_equity', 'N/A'):.1f}%")
+    print(f"Return on Assets: {extracted.get('return_on_assets', 'N/A'):.1f}%")
+
+    print(f"\n💰 LIQUIDITY RATIOS")
+    print(f"Current Ratio: {extracted.get('current_ratio', 'N/A'):.2f}")
+    print(f"Quick Ratio: {extracted.get('quick_ratio', 'N/A'):.2f}")
+
+    print(f"\n📈 LEVERAGE RATIOS")
+    print(f"Debt-to-Equity: {extracted.get('debt_to_equity', 'N/A'):.2f}")
+    print(f"Debt-to-Assets: {extracted.get('debt_to_assets', 'N/A'):.2f}")
+
+    print(f"\n⚡ EFFICIENCY RATIOS")
+    print(f"Asset Turnover: {extracted.get('asset_turnover', 'N/A'):.2f}x")
+
+    # Calculate additional ratios from raw data
+    additional_ratios = calculate_additional_ratios(extracted)
+    print(f"\n🔍 CALCULATED RATIOS")
+    for ratio_name, ratio_value in additional_ratios.items():
+        print(f"{ratio_name.replace('_', ' ').title()}: {ratio_value:.2f}{'%' if 'margin' in ratio_name or 'roe' in ratio_name or 'roa' in ratio_name else ''}")
+
+    print(f"\nExtraction Confidence: {result.confidence:.2f}")
+    ```
+  </TabItem>
+</Tabs>
+
+## Production Financial Processing
+
+Set up robust financial document processing for production:
+
+<Tabs>
+  <TabItem label="Document Processor">
+    ```python
+    class FinancialProcessor:
+        """Production-ready financial document processor"""
+
+        def __init__(self):
+            self.extractors = {
+                'earnings': LangStruct(schema=FinancialReportSchema),
+                'sec_filing': LangStruct(schema=SECFilingSchema),
+                'ratios': LangStruct(schema=FinancialRatiosSchema)
+            }
+
+            # Validation rules for financial data
+            self.validation_rules = {
+                'revenue_positive': lambda x: x.get('revenue', 0) >= 0,
+                'margin_reasonable': lambda x: 0 <= x.get('gross_margin', 0) <= 100,
+                'eps_format': lambda x: isinstance(x.get('eps'), (int, float)) or x.get('eps') is None
+            }
+
+        def detect_document_type(self, text: str) -> str:
+            """Detect the type of financial document"""
+
+            text_lower = text.lower()
+
+            if any(term in text_lower for term in ['10-k', '10-q', '8-k', 'sec filing']):
+                return 'sec_filing'
+            elif any(term in text_lower for term in ['earnings', 'quarterly results', 'q1', 'q2', 'q3', 'q4']):
+                return 'earnings'
+            elif any(term in text_lower for term in ['balance sheet', 'income statement', 'financial ratios']):
+                return 'ratios'
+            else:
+                return 'earnings'  # Default fallback
+    ```
+  </TabItem>
+  <TabItem label="Validation & Processing">
+    ```python
+        def validate_extraction(self, result, doc_type: str) -> Dict[str, Any]:
+            """Validate extracted financial data"""
+
+            validation_results = {
+                'passed': True,
+                'issues': [],
+                'warnings': []
+            }
+
+            entities = result.entities
+
+            # Apply validation rules
+            for rule_name, rule_func in self.validation_rules.items():
+                try:
+                    if not rule_func(entities):
+                        validation_results['issues'].append(f"Failed {rule_name}")
+                        validation_results['passed'] = False
+                except Exception as e:
+                    validation_results['warnings'].append(f"Could not validate {rule_name}: {e}")
+
+            # Document-specific validation
+            if doc_type == 'earnings':
+                if not entities.get('company_name'):
+                    validation_results['issues'].append("Missing company name")
+                    validation_results['passed'] = False
+
+                if entities.get('current_metrics', {}).get('revenue', 0) <= 0:
+                    validation_results['warnings'].append("Revenue is zero or negative")
+
+            elif doc_type == 'sec_filing':
+                if not entities.get('filing_type'):
+                    validation_results['issues'].append("Missing filing type")
+                    validation_results['passed'] = False
+
+            # Confidence threshold check
+            if result.confidence < 0.8:
+                validation_results['warnings'].append(f"Low confidence score: {result.confidence:.2f}")
+
+            return validation_results
+
+        def process_document(self, text: str, doc_type: str = None) -> Dict[str, Any]:
+            """Process a financial document with validation and error handling"""
+
+            if not doc_type:
+                doc_type = self.detect_document_type(text)
+
+            try:
+                # Extract data using appropriate extractor
+                extractor = self.extractors[doc_type]
+                result = extractor.extract(text, validate=True)
+
+                # Validate extraction
+                validation = self.validate_extraction(result, doc_type)
+
+                # Calculate additional metrics if possible
+                additional_metrics = {}
+                if doc_type == 'ratios':
+                    additional_metrics = calculate_additional_ratios(result.entities)
+
+                return {
+                    'success': True,
+                    'document_type': doc_type,
+                    'extracted_data': result.entities,
+                    'confidence': result.confidence,
+                    'validation': validation,
+                    'additional_metrics': additional_metrics,
+                    'processing_time': getattr(result, 'processing_time', None),
+                    'source_locations': dict(result.sources) if hasattr(result, 'sources') else {}
+                }
+
+            except Exception as e:
+                return {
+                    'success': False,
+                    'error': str(e),
+                    'document_type': doc_type,
+                    'extracted_data': {},
+                    'confidence': 0.0
+                }
+    ```
+  </TabItem>
+</Tabs>
+
+## Key Benefits
+
+<CardGrid>
+	<Card title="High Accuracy" icon="approve-check">
+		Specialized models and schemas for financial terminology
+	</Card>
+	<Card title="Comprehensive Data" icon="random">
+		Extract metrics, ratios, forecasts, and risk factors
+	</Card>
+	<Card title="Source Grounding" icon="document">
+		Track exact locations for regulatory compliance
+	</Card>
+	<Card title="Production Ready" icon="rocket">
+		Built-in validation, error handling, and batch processing
+	</Card>
+</CardGrid>
+
+## Use Cases
+
+### Investment Research
+- Quarterly earnings analysis
+- Competitive benchmarking
+- Risk assessment
+- Portfolio screening
+
+### Regulatory Compliance
+- SEC filing monitoring
+- Risk factor tracking
+- Disclosure analysis
+- Audit trail maintenance
+
+### Credit Analysis
+- Financial health assessment
+- Debt capacity evaluation
+- Cash flow analysis
+- Covenant compliance
+
+## Best Practices
+
+### Data Quality
+- Use high-resolution financial documents
+- Validate extracted metrics against known benchmarks
+- Implement confidence thresholds for critical data
+- Cross-reference multiple data sources
+
+### Performance Optimization
+- Process similar document types in batches
+- Cache frequently used extractors
+- Use appropriate model sizes for different complexity levels
+- Implement async processing for large volumes
+
+### Compliance & Security
+- Track information sources with source grounding
+- Implement data retention policies
+- Ensure secure handling of confidential financial data
+- Regular validation against regulatory requirements
+
+## Next Steps
+
+<CardGrid>
+	<Card title="Medical Records" icon="heart">
+		[Healthcare document processing](/examples/medical-records/)
+	</Card>
+	<Card title="Legal Contracts" icon="document">
+		[Legal document analysis](/examples/legal-contracts/)
+	</Card>
+	<Card title="Source Grounding" icon="information">
+		[Track data sources for compliance](/source-grounding/)
+	</Card>
+	<Card title="API Reference" icon="laptop">
+		[Complete API documentation](/api/)
+	</Card>
+</CardGrid>
+
+Financial document processing requires high accuracy - LangStruct's source grounding features help track where information was extracted from the original documents.

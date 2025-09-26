@@ -1,0 +1,597 @@
+---
+title: Query Parsing
+description: Transform natural language queries into structured filters for precise RAG retrieval
+---
+
+import { Card, CardGrid, Code } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+# Query Parsing
+
+LangStruct includes query parsing capabilities to decompose natural language queries into semantic terms and structured filters. This allows RAG systems to combine embedding-based search with metadata filtering.
+
+## The Problem with Traditional RAG Queries
+
+<CardGrid>
+  <Card title="Imprecise Filtering" icon="warning">
+    Users must manually construct complex filter syntax
+  </Card>
+  <Card title="Semantic-Only Search" icon="random">
+    Can't combine natural language with structured constraints
+  </Card>
+  <Card title="Technical Barriers" icon="document">
+    Non-technical users struggle with query DSLs
+  </Card>
+  <Card title="Manual Translation" icon="information">
+    Developers manually parse queries into filters
+  </Card>
+</CardGrid>
+
+## Understanding Query Anatomy: Why This Matters
+
+User queries aren't monolithic - they contain fundamentally different types of information that require different handling. Understanding this is key to building effective RAG systems.
+
+### The Natural Structure of Queries
+
+Consider this real query:
+> "Show me Q3 2024 financial reports from tech companies with revenue over $100B that mention AI investments"
+
+This single query contains **three distinct types of information**:
+
+<CardGrid>
+  <Card title="Structural Filters" icon="setting">
+    **Exact constraints that should filter results:**
+    - Quarter: Q3 2024 (exact match)
+    - Revenue: > $100B (numeric comparison)
+    - Sector: Technology (category match)
+    
+    These need **database-style filtering**, not semantic search
+  </Card>
+  <Card title="Semantic Content" icon="magnifier">
+    **Conceptual topics for similarity search:**
+    - "financial reports" (could be 10-K, earnings, statements)
+    - "AI investments" (could be ML, artificial intelligence, neural networks)
+    
+    These need **embedding-based semantic search**
+  </Card>
+  <Card title="Implicit Context" icon="information">
+    **Assumed context from natural language:**
+    - "Show me" implies retrieval intent
+    - "companies" implies corporate entities
+    - Plural suggests multiple results expected
+    
+    These provide **query understanding context**
+  </Card>
+</CardGrid>
+
+### Why Traditional RAG Fails Here
+
+**Traditional Approach:** Embed the entire query and do similarity search
+```python
+# Everything becomes one embedding vector
+query_embedding = embed("Show me Q3 2024 financial reports from tech companies...")
+results = vector_db.similarity_search(query_embedding)
+# Returns documents mentioning ANY of these concepts, not ALL
+```
+
+**Problems:**
+- "Q3 2024" becomes a fuzzy concept instead of exact filter
+- "$100B" loses its comparative meaning (> becomes similarity)
+- Might return Q1 reports that mention "Q3 projections"
+- Could return $10M companies that mention "$100B market"
+- No guarantee all constraints are met
+
+### The Semantic vs Structural Divide
+
+<Tabs>
+  <TabItem label="Semantic Terms">
+    **What they are:** Conceptual topics that benefit from semantic understanding
+    
+    **Examples:**
+    - "artificial intelligence" ≈ "AI" ≈ "machine learning"
+    - "financial performance" ≈ "earnings" ≈ "fiscal results"
+    - "customer satisfaction" ≈ "user happiness" ≈ "client feedback"
+    
+    **How they work:** Converted to embeddings for similarity matching
+    
+    **Best for:**
+    - Finding conceptually related content
+    - Handling synonyms and variations
+    - Discovering relevant but not exact matches
+  </TabItem>
+  <TabItem label="Structured Filters">
+    **What they are:** Exact constraints that must be precisely matched
+    
+    **Examples:**
+    - Date/Time: "Q3 2024", "after 2023", "last 30 days"
+    - Numbers: "revenue > $100M", "5-10 employees", "top 3"
+    - Categories: "tech sector", "approved status", "high priority"
+    - Entities: "Apple Inc.", "California", "John Smith"
+    
+    **How they work:** Converted to database-style filter operations
+    
+    **Best for:**
+    - Enforcing hard constraints
+    - Filtering by exact values
+    - Numerical comparisons
+    - Boolean conditions
+  </TabItem>
+</Tabs>
+
+### Real-World Query Breakdowns
+
+Let's see how different queries naturally decompose:
+
+#### Financial Query
+> "Find profitable tech companies from Q3 2024 discussing expansion plans"
+
+- **Semantic terms:** `["expansion plans", "discussing growth"]`
+- **Structured filters:** `{"quarter": "Q3 2024", "sector": "Technology", "profitable": true}`
+- **Why it matters:** You want companies that ARE profitable (filter), not just ones that DISCUSS profitability
+
+#### Healthcare Query  
+> "Patient records over 65 years old with diabetes showing improvement"
+
+- **Semantic terms:** `["showing improvement", "better outcomes"]`
+- **Structured filters:** `{"patient_age": {"$gte": 65}, "diagnosis": "diabetes"}`
+- **Why it matters:** Age is a hard constraint, but "improvement" needs semantic understanding
+
+#### E-commerce Query
+> "Best-selling electronics under $500 with 4+ star reviews available for shipping"
+
+- **Semantic terms:** `["best-selling", "popular items"]`
+- **Structured filters:** `{"category": "Electronics", "price": {"$lt": 500}, "rating": {"$gte": 4.0}, "in_stock": true}`
+- **Why it matters:** "Best-selling" is relative/semantic, but price and rating are exact filters
+
+### The Power of Separation
+
+By separating queries into components, you can:
+
+#### Apply the right tool for each part:
+- Embeddings for semantic concepts
+- Filters for structural constraints
+- Both working together for precision
+
+#### Guarantee constraint satisfaction:
+- Filters ensure Q3 2024 means exactly Q3 2024
+- Revenue > $100B means precisely that, not similar amounts
+
+#### Improve retrieval accuracy:
+- From 20+ "maybe relevant" results
+- To 3-5 "definitely match all criteria" results
+
+#### Enable complex business logic:
+- Combine multiple filters with AND/OR logic
+- Apply ranges, comparisons, and set operations
+- Maintain semantic flexibility where needed
+
+## LangStruct Query Solution
+
+LangStruct's query() method uses **LLM intelligence** to automatically convert natural language into:
+- **Semantic search terms** for embedding-based retrieval
+- **Structured filters** for precise metadata matching
+- **Confidence scores** for query understanding
+- **Human-readable explanations** of parsing logic
+
+**Important:** LangStruct uses pure LLM-based parsing - no regex patterns or hardcoded rules. The LLM naturally understands comparisons like "over $100B", temporal references like "Q3 2024", and entity mentions, intelligently mapping them to your schema fields.
+
+## Basic Usage
+
+### Simple Query Parsing
+
+```python
+from langstruct import LangStruct
+
+# Define your schema (same as document extraction!)
+schema_example = {
+    "company": "Apple Inc.",
+    "revenue": 125.3,  # billions
+    "quarter": "Q3 2024",
+    "profit_margin": 23.1,  # percentage
+    "growth_rate": 15.2,
+    "sector": "Technology"
+}
+
+# Create LangStruct instance
+ls = LangStruct(example=schema_example)
+
+# Parse natural language query
+query = "Show me Q3 2024 tech companies with revenue over $100B"
+result = ls.query(query)
+
+print("📝 Original query:", query)
+print("🔍 Semantic terms:", result.semantic_terms)
+print("🎯 Structured filters:", result.structured_filters)
+print("💯 Confidence:", f"{result.confidence:.1%}")
+print("📖 Explanation:", result.explanation)
+```
+
+**Output:**
+```
+📝 Original query: Show me Q3 2024 tech companies with revenue over $100B
+🔍 Semantic terms: ['tech companies']
+🎯 Structured filters: {
+    'quarter': 'Q3 2024',
+    'sector': 'Technology',
+    'revenue': {'$gte': 100.0}
+}
+💯 Confidence: 91.5%
+📖 Explanation: 
+Searching for: tech companies
+With filters:
+  • quarter = Q3 2024
+  • sector = Technology
+  • revenue ≥ 100.0
+```
+
+## Advanced Features
+
+### Complex Query Patterns
+
+LangStruct handles sophisticated query patterns automatically:
+
+```python
+# Comparative queries
+result = ls.query("Companies with margins above 20% and declining growth")
+# Filters: {"profit_margin": {"$gte": 20.0}, "growth_rate": {"$lt": 0}}
+
+# Multiple entities
+result = ls.query("Apple or Microsoft Q3 2024 financial results")
+# Filters: {"company": {"$in": ["Apple Inc.", "Microsoft"]}, "quarter": "Q3 2024"}
+
+# Range queries
+result = ls.query("Mid-size companies between $10B and $50B revenue")
+# Filters: {"revenue": {"$gte": 10.0, "$lte": 50.0}}
+
+# Temporal references
+result = ls.query("Recent quarterly reports from profitable companies")
+# Filters: {"quarter": "Q3 2024", "profit_margin": {"$gt": 0}}
+```
+
+### Interpreting Parsed Queries
+
+Every `ParsedQuery` includes an `explanation` string that summarizes how the query was parsed (semantic terms and filters). Use it for debugging and UX.
+
+### Query Explanation
+
+`ParsedQuery.explanation` provides a human-readable breakdown of the parsed query. You can render it directly in UIs for transparency.
+
+## Bidirectional RAG Integration
+
+### Complete RAG Enhancement Pipeline
+
+```python
+from langstruct import LangStruct
+from langchain_community.vectorstores import Chroma
+from langchain_community.embeddings import OpenAIEmbeddings
+
+class EnhancedRAGSystem:
+    def __init__(self, schema_example):
+        # Same schema for both extraction and parsing!
+        self.langstruct = LangStruct(example=schema_example)
+        self.vectorstore = Chroma(embedding_function=OpenAIEmbeddings())
+    
+    def index_document(self, text: str):
+        """Extract metadata and index document"""
+        # Extract structured metadata
+        extraction = self.langstruct.extract(text)
+        
+        # Index with both text and metadata
+        self.vectorstore.add_texts(
+            texts=[text],
+            metadatas=[extraction.entities]
+        )
+    
+    def natural_query(self, query: str, k: int = 5):
+        """Query using natural language"""
+        # Parse query into components
+        parsed = self.langstruct.query(query)
+        
+        # Perform hybrid search
+        results = self.vectorstore.similarity_search(
+            query=' '.join(parsed.semantic_terms),
+            k=k,
+            filter=parsed.structured_filters
+        )
+        
+        return results, parsed.explanation
+
+# Usage
+rag = EnhancedRAGSystem(schema_example={
+    "company": "Example Corp",
+    "revenue": 50.0,
+    "quarter": "Q3 2024",
+    "sector": "Technology"
+})
+
+# Index documents (structured extraction)
+rag.index_document("Apple reported Q3 2024 revenue of $125.3B...")
+rag.index_document("Microsoft Q3 2024 earnings showed $62.9B revenue...")
+
+# Query naturally (structured parsing)
+results, explanation = rag.natural_query(
+    "Q3 2024 tech companies with revenue over $60B"
+)
+
+print(f"Found {len(results)} matching documents")
+print(f"Query interpretation: {explanation}")
+```
+
+## Query Pattern Examples
+
+### Financial Queries
+
+```python
+financial_ls = LangStruct(example={
+    "company": "Apple Inc.",
+    "quarter": "Q3 2024",
+    "revenue": 125.3,
+    "profit_margin": 23.1,
+    "eps": 1.53,
+    "guidance": "positive"
+})
+
+queries = [
+    "Q3 earnings beats with positive guidance",
+    "Companies missing revenue estimates",
+    "Tech giants with EPS above $1.50",
+    "Declining margins in Q3 2024"
+]
+
+for q in queries:
+    result = financial_ls.query(q)
+    print(f"Query: {q}")
+    print(f"Filters: {result.structured_filters}\n")
+```
+
+### Healthcare Queries
+
+```python
+medical_ls = LangStruct(example={
+    "patient_age": 65,
+    "diagnosis": "diabetes",
+    "medication": "metformin",
+    "severity": "moderate",
+    "outcome": "improved"
+})
+
+# Parse medical queries
+result = medical_ls.query(
+    "Elderly diabetes patients on metformin with improved outcomes"
+)
+# Filters: {
+#     "patient_age": {"$gte": 65},
+#     "diagnosis": "diabetes",
+#     "medication": "metformin",
+#     "outcome": "improved"
+# }
+```
+
+### E-commerce Queries
+
+```python
+product_ls = LangStruct(example={
+    "category": "Electronics",
+    "price": 999.99,
+    "rating": 4.5,
+    "brand": "Apple",
+    "in_stock": True
+})
+
+# Parse shopping queries
+result = product_ls.query(
+    "Apple electronics under $500 with 4+ star ratings in stock"
+)
+# Filters: {
+#     "brand": "Apple",
+#     "category": "Electronics",
+#     "price": {"$lt": 500.0},
+#     "rating": {"$gte": 4.0},
+#     "in_stock": True
+# }
+```
+
+## Integration with Vector Databases
+
+### ChromaDB Integration
+
+```python
+from chromadb import Client
+from langstruct import LangStruct
+
+# Setup
+client = Client()
+collection = client.create_collection("documents")
+ls = LangStruct(example=your_schema)
+
+# Query with natural language
+def smart_search(query: str):
+    parsed = ls.query(query)
+    
+    results = collection.query(
+        query_texts=parsed.semantic_terms,
+        where=parsed.structured_filters,
+        n_results=10
+    )
+    
+    return results
+```
+
+### Pinecone Integration
+
+```python
+import pinecone
+from langstruct import LangStruct
+
+# Setup
+pinecone.init(api_key="your-api-key")
+index = pinecone.Index("your-index")
+ls = LangStruct(example=your_schema)
+
+# Natural language query
+def pinecone_search(query: str):
+    parsed = ls.query(query)
+    
+    # Convert to Pinecone filter format
+    pinecone_filter = {
+        f"metadata.{k}": v 
+        for k, v in parsed.structured_filters.items()
+    }
+    
+    results = index.query(
+        vector=embed(parsed.semantic_terms),
+        filter=pinecone_filter,
+        top_k=10
+    )
+    
+    return results
+```
+
+## Best Practices
+
+### 1. Schema Consistency
+
+Always use the same schema for document extraction and query parsing:
+
+```python
+# ✅ Good: Single instance for both operations
+schema = {"company": "Apple", "revenue": 100.0, "quarter": "Q3"}
+ls = LangStruct(example=schema)
+# Use ls.extract() for documents and ls.query() for queries
+
+# ❌ Bad: Different schemas for extraction and queries
+extractor = LangStruct(example={"company": "Apple"})
+query_ls = LangStruct(example={"firm": "Apple"})  # Mismatch!
+```
+
+### 2. Handle Parsing Failures Gracefully
+
+```python
+def safe_query(ls, query):
+    try:
+        result = ls.query(query)
+        if result.confidence < 0.5:
+            # Fall back to pure semantic search
+            return {"semantic_only": True, "query": query}
+        return result.structured_filters
+    except Exception as e:
+        logger.warning(f"Parse failed: {e}")
+        return {"semantic_only": True, "query": query}
+```
+
+### 3. Optimize for Your Domain
+
+```python
+# Domain-specific instance with rich schema
+domain_ls = LangStruct(
+    example={
+        # Include all filterable fields
+        "company": "Example Corp",
+        "revenue": 50.0,
+        "revenue_growth": 15.2,
+        "profit_margin": 20.1,
+        "quarter": "Q3 2024",
+        "fiscal_year": 2024,
+        "sector": "Technology",
+        "market_cap": "Large Cap",
+        # Include synonyms in descriptions
+        "earnings": 10.5,  # Also covers "profits", "income"
+    },
+    # Can optimize for better accuracy
+    optimize=True
+)
+```
+
+## Performance Considerations
+
+### Caching Parsed Queries
+
+```python
+from functools import lru_cache
+
+class CachedLangStruct:
+    def __init__(self, schema):
+        self.ls = LangStruct(example=schema)
+        
+    @lru_cache(maxsize=1000)
+    def query_cached(self, query: str):
+        """Cache frequently used queries"""
+        return self.ls.query(query)
+```
+
+### Batch Query Processing
+
+```python
+# Process multiple queries efficiently
+queries = [
+    "Q3 2024 tech companies over $100B",
+    "Healthcare companies with positive growth",
+    "Financial services declining margins"
+]
+
+# Parse all at once
+results = [ls.query(q) for q in queries]
+
+# Or with parallel processing
+from concurrent.futures import ThreadPoolExecutor
+
+with ThreadPoolExecutor(max_workers=5) as executor:
+    results = list(executor.map(ls.query, queries))
+```
+
+## Comparison: Before and After
+
+### Before LangStruct Query (Traditional RAG)
+
+```python
+# Users must write complex filter syntax
+results = vectorstore.search(
+    query="technology financial performance",
+    filter={
+        "$and": [
+            {"quarter": {"$eq": "Q3 2024"}},
+            {"revenue": {"$gte": 100000000000}},
+            {"sector": {"$eq": "Technology"}}
+        ]
+    }
+)
+```
+
+### After LangStruct Query (Natural Language)
+
+```python
+# Users write natural language
+results = enhanced_rag.search(
+    "Q3 2024 tech companies with revenue over $100B"
+)
+# Filters automatically generated!
+```
+
+## Next Steps
+
+<CardGrid>
+  <Card title="Complete Example" icon="document">
+    See the full [bidirectional RAG example](/examples/) with query parsing
+  </Card>
+  <Card title="RAG Integration" icon="rocket">
+    Learn about [complete RAG enhancement](/rag-integration/)
+  </Card>
+  <Card title="API Reference" icon="setting">
+    Explore the [LangStruct API](/api/)
+  </Card>
+  <Card title="Optimization" icon="star">
+    [Optimize query parsing](/optimization/) for your domain
+  </Card>
+</CardGrid>
+
+## Summary
+
+LangStruct's query() method completes the bidirectional RAG enhancement:
+
+- **🔄 Bidirectional Intelligence**: Documents and queries both become structured
+- **🎯 Precise Retrieval**: No more "search and hope" - get exactly what you ask for
+- **🗣️ Natural Language**: Users speak naturally, system understands precisely
+- **🏗️ Same Schema**: One schema for both extraction and parsing
+- **⚡ Drop-in Enhancement**: Works with any vector database or RAG system
+
+Transform your RAG system from fuzzy search to precision retrieval with LangStruct!

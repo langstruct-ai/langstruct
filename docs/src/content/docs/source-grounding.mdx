@@ -1,0 +1,521 @@
+---
+title: Source Grounding Guide
+description: Track exactly where extracted information comes from in your source documents with LangStruct's source grounding capabilities
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Source grounding lets you track exactly where each piece of extracted information comes from in your source documents. This is crucial for building trust, debugging extraction issues, and meeting compliance requirements.
+
+## What is Source Grounding?
+
+Source grounding records the exact text spans in your input documents that correspond to each extracted field.
+
+### Key Benefits
+
+<CardGrid>
+	<Card title="Transparency" icon="document">
+		See exactly what text led to each extracted value
+	</Card>
+	<Card title="Trust" icon="approve-check">
+		Verify extractions against source material
+	</Card>
+	<Card title="Debugging" icon="setting">
+		Identify why certain values were extracted incorrectly
+	</Card>
+	<Card title="Compliance" icon="information">
+		Meet audit requirements for data lineage
+	</Card>
+</CardGrid>
+
+## Basic Source Grounding
+
+Enable source grounding when creating your extractor:
+
+```python
+from pydantic import BaseModel, Field
+from langstruct import LangStruct
+
+class PersonSchema(BaseModel):
+    name: str = Field(description="Full name of the person")
+    age: int = Field(description="Age in years")
+    location: str = Field(description="Current location")
+
+# Enable source grounding
+extractor = LangStruct(
+    schema=PersonSchema,
+    model="gemini/gemini-2.5-flash-lite",  # Fast and cost-effective
+    use_sources=True  # Enable source tracking
+)
+
+text = "Dr. Sarah Johnson, 34, works at MIT in Cambridge, Massachusetts."
+result = extractor.extract(text)
+
+# Access source information
+print("=== Extracted Data ===")
+print(f"Name: {result.entities['name']}")
+print(f"Age: {result.entities['age']}")
+print(f"Location: {result.entities['location']}")
+
+print("\n=== Source Locations ===")
+for field, spans in result.sources.items():
+    for span in spans:
+        print(f"{field}: '{span.text}' (positions {span.start}-{span.end})")
+```
+
+**Output:**
+```
+=== Extracted Data ===
+Name: Dr. Sarah Johnson
+Age: 34
+Location: Cambridge, Massachusetts
+
+=== Source Locations ===
+name: 'Dr. Sarah Johnson' (positions 0-16)
+age: '34' (positions 18-20)
+location: 'Cambridge, Massachusetts' (positions 39-62)
+```
+
+## Working with Source Spans
+
+Source spans provide detailed information about text locations:
+
+```python
+# Extract with source grounding
+result = extractor.extract(text)
+
+# Examine source spans in detail
+for field_name, spans in result.sources.items():
+    print(f"\nField: {field_name}")
+    for i, span in enumerate(spans):
+        print(f"  Span {i+1}:")
+        print(f"    Text: '{span.text}'")
+        print(f"    Start: {span.start}")
+        print(f"    End: {span.end}")
+        print(f"    Length: {len(span.text)}")
+
+        # Get surrounding context
+        context_start = max(0, span.start - 20)
+        context_end = min(len(text), span.end + 20)
+        context = text[context_start:context_end]
+        print(f"    Context: '...{context}...'")
+```
+
+## Advanced Source Features
+
+### Multiple Sources per Field
+
+Some fields may have multiple source locations:
+
+```python
+class PersonSchema(BaseModel):
+    name: str = Field(description="Full name")
+    skills: List[str] = Field(description="Technical skills")
+
+text = """
+John Smith is a developer. He knows Python, JavaScript, and Go.
+John also has experience with React and Django frameworks.
+"""
+
+result = extractor.extract(text)
+
+# Skills might have multiple source spans
+for field, spans in result.sources.items():
+    print(f"\n{field}:")
+    for span in spans:
+        print(f"  - '{span.text}' at {span.start}-{span.end}")
+```
+
+### Source Confidence
+
+Each source span includes a confidence score:
+
+```python
+# Access confidence for each source span
+for field, spans in result.sources.items():
+    print(f"\n{field}:")
+    for span in spans:
+        print(f"  Text: '{span.text}'")
+        print(f"  Position: {span.start}-{span.end}")
+```
+
+### Source Validation
+
+Validate that sources contain the expected values:
+
+```python
+def validate_sources(result):
+    """Validate that source spans contain the extracted values"""
+    validation_errors = []
+
+    for field, value in result.entities.items():
+        if field not in result.sources:
+            validation_errors.append(f"No source found for field '{field}'")
+            continue
+
+        spans = result.sources[field]
+        if not spans:
+            validation_errors.append(f"Empty source spans for field '{field}'")
+            continue
+
+        # Check if any span contains the extracted value
+        found_match = False
+        for span in spans:
+            if str(value).lower() in span.text.lower():
+                found_match = True
+                break
+
+        if not found_match:
+            validation_errors.append(
+                f"Field '{field}' value '{value}' not found in source spans: {[s.text for s in spans]}"
+            )
+
+    return validation_errors
+
+# Validate extraction sources
+errors = validate_sources(result)
+if errors:
+    print("Validation errors:")
+    for error in errors:
+        print(f"  - {error}")
+else:
+    print("All sources validated successfully!")
+```
+
+## Interactive Source Visualization
+
+LangStruct provides advanced interactive HTML visualizations that make source grounding easy to explore:
+
+```python
+# Generate interactive visualization
+results = extractor.extract([
+    "Dr. Sarah Johnson, 34, works at MIT in Cambridge, Massachusetts.",
+    "Prof. John Miller, 42, teaches at Harvard University in Boston."
+])
+
+# Create advanced interactive HTML with source highlighting
+extractor.visualize(results, "source_analysis.html",
+                   title="Source Grounding Analysis")
+
+print("🚀 Open source_analysis.html to explore:")
+print("  • Click highlighted text spans to see extractions")
+print("  • Filter by entity types")
+print("  • Search across documents")
+print("  • View character-level source positions")
+```
+
+**Interactive Features:**
+- **Color-coded entity highlighting** with consistent colors
+- **Clickable source spans** showing exact extraction locations
+- **Real-time search** across all text and entities
+- **Entity type filtering** with interactive chips
+- **Dual view modes** (document and list views)
+- **Live statistics** updating as you explore
+
+## Manual Source Highlighting
+
+For custom highlighting needs, you can also create manual visualizations:
+
+<Tabs>
+  <TabItem label="Basic Highlighting">
+    ```python
+    def highlight_sources(text, sources, entities):
+        """Create HTML with highlighted source spans"""
+
+        # Create list of all spans with their field names
+        all_spans = []
+        colors = ['yellow', 'lightblue', 'lightgreen', 'pink', 'orange']
+        color_map = {}
+
+        for field, spans in sources.items():
+            if field not in color_map:
+                color_map[field] = colors[len(color_map) % len(colors)]
+
+            for span in spans:
+                all_spans.append({
+                    'start': span.start,
+                    'end': span.end,
+                    'field': field,
+                    'text': span.text,
+                    'value': entities[field],
+                    'color': color_map[field]
+                })
+
+        # Sort spans by position
+        all_spans.sort(key=lambda x: x['start'])
+
+        # Build highlighted HTML
+        html = '<div style="font-family: monospace; line-height: 1.6;">'
+        last_pos = 0
+
+        for span in all_spans:
+            # Add text before this span
+            html += text[last_pos:span['start']]
+
+            # Add highlighted span
+            html += f'<span style="background-color: {span["color"]}; padding: 2px; border-radius: 3px;" title="{span["field"]}: {span["value"]}">{span["text"]}</span>'
+
+            last_pos = span['end']
+
+        # Add remaining text
+        html += text[last_pos:]
+        html += '</div>'
+
+        return html
+
+    # Generate highlighted HTML
+    highlighted = highlight_sources(text, result.sources, result.entities)
+
+    # Save to file or display in Jupyter
+    with open('highlighted.html', 'w') as f:
+        f.write(highlighted)
+    ```
+  </TabItem>
+  <TabItem label="Rich Console Output">
+    ```python
+    from rich.console import Console
+    from rich.text import Text
+
+    def rich_highlight_sources(text, sources, entities):
+        """Display highlighted text in console using Rich"""
+
+        console = Console()
+        rich_text = Text(text)
+
+        colors = ['yellow', 'blue', 'green', 'magenta', 'cyan']
+        color_map = {}
+
+        for field, spans in sources.items():
+            if field not in color_map:
+                color_map[field] = colors[len(color_map) % len(colors)]
+
+            for span in spans:
+                rich_text.stylize(
+                    f"bold {color_map[field]} on {color_map[field]}",
+                    span.start,
+                    span.end
+                )
+
+        # Display with legend
+        console.print("\nHighlighted Sources:", style="bold")
+        console.print(rich_text)
+
+        console.print("\nLegend:", style="bold")
+        for field, color in color_map.items():
+            console.print(f"  {field}: {entities[field]}", style=f"{color}")
+
+    # Display in console
+    rich_highlight_sources(text, result.sources, result.entities)
+    ```
+  </TabItem>
+</Tabs>
+
+## Production Use Cases
+
+### Compliance and Auditing
+
+Source grounding helps meet regulatory requirements:
+
+```python
+class ComplianceExtractor:
+    def __init__(self, schema):
+        self.extractor = LangStruct(
+            schema=schema,
+            use_sources=True,
+            model="gemini/gemini-2.5-flash-lite"  # Fast and reliable
+        )
+
+    def extract_with_audit_trail(self, document, document_id=None):
+        """Extract with full audit trail"""
+
+        result = self.extractor.extract(document)
+
+        audit_record = {
+            'document_id': document_id,
+            'timestamp': datetime.utcnow().isoformat(),
+            'model': 'configured-LM',
+            'extracted_data': result.entities,
+            'confidence': result.confidence,
+            'source_spans': {
+                field: [
+                    {
+                        'text': span.text,
+                        'start': span.start,
+                        'end': span.end
+                    }
+                    for span in spans
+                ]
+                for field, spans in result.sources.items()
+            }
+        }
+
+        return result, audit_record
+
+# Usage for compliance
+extractor = ComplianceExtractor(PersonSchema)
+result, audit = extractor.extract_with_audit_trail(
+    document=text,
+    document_id="DOC-2024-001"
+)
+
+# Store audit trail in database
+store_audit_record(audit)
+```
+
+### Quality Assurance
+
+Use source grounding for quality control:
+
+```python
+class QualityChecker:
+    def __init__(self, min_confidence=0.8):
+        self.min_confidence = min_confidence
+
+    def check_extraction_quality(self, result):
+        """Check extraction quality using source grounding"""
+
+        quality_report = {
+            'overall_confidence': result.confidence,
+            'field_quality': {},
+            'warnings': [],
+            'errors': []
+        }
+
+        for field, spans in result.sources.items():
+            if not spans:
+                quality_report['errors'].append(f"No source found for field '{field}'")
+                continue
+
+            quality_report['field_quality'][field] = {
+                'span_count': len(spans),
+                'matches_found': sum(
+                    1 for s in spans if str(result.entities.get(field, '')).lower() in s.text.lower()
+                ),
+                'total_length': sum(len(span.text) for span in spans)
+            }
+
+        return quality_report
+
+# Check quality
+checker = QualityChecker(min_confidence=0.85)
+quality = checker.check_extraction_quality(result)
+
+print(f"Overall confidence: {quality['overall_confidence']:.3f}")
+for warning in quality['warnings']:
+    print(f"Warning: {warning}")
+```
+
+### Debugging Extraction Issues
+
+Use source grounding to debug extraction problems:
+
+```python
+def debug_extraction(result, expected_entities):
+    """Debug extraction by comparing sources with expected values"""
+
+    print("=== Extraction Debug Report ===")
+
+    for field, expected_value in expected_entities.items():
+        actual_value = result.entities.get(field)
+        spans = result.sources.get(field, [])
+
+        print(f"\nField: {field}")
+        print(f"Expected: {expected_value}")
+        print(f"Actual: {actual_value}")
+        print(f"Match: {'✅' if actual_value == expected_value else '❌'}")
+
+        if spans:
+            print("Source spans:")
+            for i, span in enumerate(spans):
+                print(f"  {i+1}. '{span.text}'")
+        else:
+            print("⚠️  No source spans found")
+
+        # Suggest improvements
+        if actual_value != expected_value:
+            print("💡 Suggestions:")
+            if not spans:
+                print("   - Check if field description is clear")
+                print("   - Verify the text contains the expected information")
+            else:
+                print("   - Review source spans for accuracy")
+                print("   - Consider improving the field description")
+                print("   - Add more training examples with similar patterns")
+
+# Debug the extraction
+expected = {
+    'name': 'Dr. Sarah Johnson',
+    'age': 34,
+    'location': 'Cambridge, Massachusetts'
+}
+
+debug_extraction(result, expected)
+```
+
+## Best Practices
+
+<CardGrid>
+	<Card title="Always Enable in Production" icon="approve-check">
+		Source grounding is essential for production reliability and debugging
+	</Card>
+	<Card title="Validate Source Spans" icon="setting">
+		Implement validation to ensure sources match extracted values
+	</Card>
+	<Card title="Store Audit Trails" icon="document">
+		Keep source information for compliance and debugging purposes
+	</Card>
+	<Card title="Monitor Source Quality" icon="random">
+		Track presence and alignment of spans over time
+	</Card>
+</CardGrid>
+
+## Performance Considerations
+
+Source grounding has minimal performance impact:
+
+```python
+import time
+
+# Benchmark with and without source grounding
+def benchmark_extraction():
+    text = "Sample text for extraction..."
+    iterations = 100
+
+    # Without source grounding
+    extractor_no_sources = LangStruct(schema=PersonSchema, use_sources=False)
+    start = time.time()
+    for _ in range(iterations):
+        extractor_no_sources.extract(text)
+    time_no_sources = time.time() - start
+
+    # With source grounding
+    extractor_with_sources = LangStruct(schema=PersonSchema, use_sources=True)
+    start = time.time()
+    for _ in range(iterations):
+        extractor_with_sources.extract(text)
+    time_with_sources = time.time() - start
+
+    print(f"Without sources: {time_no_sources:.3f}s")
+    print(f"With sources: {time_with_sources:.3f}s")
+    print(f"Overhead: {((time_with_sources - time_no_sources) / time_no_sources * 100):.1f}%")
+
+benchmark_extraction()
+```
+
+## Next Steps
+
+<CardGrid>
+	<Card title="Error Handling" icon="warning">
+		[Learn robust error handling techniques](/error-handling/)
+	</Card>
+	<Card title="Optimization" icon="rocket">
+		[Optimize extraction performance](/optimization/)
+	</Card>
+	<Card title="Examples" icon="open-book">
+		[See source grounding in real applications](/examples/)
+	</Card>
+	<Card title="API Reference" icon="information">
+		[Complete source grounding API documentation](/api/)
+	</Card>
+</CardGrid>

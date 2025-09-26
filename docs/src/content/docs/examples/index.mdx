@@ -1,0 +1,313 @@
+---
+title: Examples
+description: Real-world examples of LangStruct in action across different domains and use cases
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+Explore real-world examples of LangStruct in action across different domains. Each example includes complete code, explanations, and best practices for production use.
+
+## Featured Examples
+
+<CardGrid>
+	<Card title="Financial Documents" icon="document">
+		Extract metrics, dates, and insights from earnings reports, SEC filings, and financial statements
+		[View Example](/examples/financial-documents/)
+	</Card>
+	<Card title="Medical Records" icon="heart">
+		Process clinical notes, lab reports, and medical documents
+		[View Example](/examples/medical-records/)
+	</Card>
+	<Card title="Legal Contracts" icon="document">
+		Analyze contracts, agreements, and legal documents for key terms and risks
+		[View Example](/examples/legal-contracts/)
+	</Card>
+	<Card title="Scientific Papers" icon="document">
+		Extract methodology, results, and citations from scientific literature
+		[View Example](/examples/scientific-papers/)
+	</Card>
+</CardGrid>
+
+## Quick Start Examples
+
+### Basic Person Extraction
+
+Perfect for getting started with LangStruct:
+
+```python
+from pydantic import BaseModel, Field
+from langstruct import LangStruct
+
+class PersonSchema(BaseModel):
+    name: str = Field(description="Full name")
+    age: int = Field(description="Age in years")
+    occupation: str = Field(description="Job title")
+
+extractor = LangStruct(schema=PersonSchema)
+result = extractor.extract("Dr. Sarah Johnson, 34, is a data scientist at Google")
+print(result.entities)  # {'name': 'Dr. Sarah Johnson', 'age': 34, 'occupation': 'data scientist'}
+```
+
+### Product Information Extraction
+
+Extract structured product data from descriptions:
+
+```python
+class ProductSchema(BaseModel):
+    name: str = Field(description="Product name")
+    price: float = Field(description="Price in USD")
+    features: List[str] = Field(description="Key features")
+    brand: str = Field(description="Brand name")
+
+extractor = LangStruct(schema=ProductSchema)
+text = """
+MacBook Pro 16" - $2,399
+Features: M2 Pro chip, 16GB RAM, 512GB SSD, Retina display
+Brand: Apple
+"""
+result = extractor.extract(text)
+```
+
+## Domain-Specific Examples
+
+### Business Intelligence
+
+<CardGrid>
+	<Card title="Financial Documents" icon="star">
+		Quarterly earnings, SEC filings, balance sheets
+		[View Example](/examples/financial-documents/)
+	</Card>
+	<Card title="Market Research" icon="document">
+		Consumer surveys, market analysis, competitor data
+	</Card>
+	<Card title="Sales Data" icon="random">
+		CRM records, sales reports, customer feedback
+	</Card>
+</CardGrid>
+
+### Healthcare & Life Sciences
+
+<CardGrid>
+	<Card title="Medical Records" icon="heart">
+		Patient records, diagnostic reports, treatment plans
+		[View Example](/examples/medical-records/)
+	</Card>
+	<Card title="Scientific Papers" icon="document">
+		Medical literature, clinical trial results, case studies
+		[View Example](/examples/scientific-papers/)
+	</Card>
+	<Card title="Lab Reports" icon="laptop">
+		Test results, pathology reports, imaging studies
+	</Card>
+</CardGrid>
+
+### Legal & Compliance
+
+<CardGrid>
+	<Card title="Legal Contracts" icon="document">
+		Service agreements, NDAs, employment contracts
+		[View Example](/examples/legal-contracts/)
+	</Card>
+	<Card title="Regulatory Filings" icon="information">
+		SEC documents, compliance reports, legal notices
+	</Card>
+	<Card title="Case Law" icon="approve-check">
+		Court decisions, legal precedents, case summaries
+	</Card>
+</CardGrid>
+
+### Additional Code Examples
+
+For the use cases mentioned above that don't have dedicated pages, here are quick implementation examples:
+
+#### Market Research Analysis
+
+```python
+class MarketResearchSchema(BaseModel):
+    survey_topic: str = Field(description="Main research topic")
+    respondents: int = Field(description="Number of survey respondents")
+    key_findings: List[str] = Field(description="Primary research findings")
+    demographics: List[str] = Field(description="Respondent demographics")
+    recommendations: List[str] = Field(description="Business recommendations")
+
+market_extractor = LangStruct(schema=MarketResearchSchema)
+```
+
+#### Sales Data Extraction
+
+```python
+class SalesDataSchema(BaseModel):
+    customer_name: str = Field(description="Customer or company name")
+    deal_value: float = Field(description="Deal value in USD")
+    products: List[str] = Field(description="Products or services sold")
+    sales_rep: str = Field(description="Sales representative name")
+    close_date: str = Field(description="Deal close date")
+    pipeline_stage: str = Field(description="Current sales stage")
+
+sales_extractor = LangStruct(schema=SalesDataSchema)
+```
+
+#### Lab Report Processing
+
+```python
+class LabReportSchema(BaseModel):
+    patient_id: str = Field(description="Patient identifier")
+    test_type: str = Field(description="Type of laboratory test")
+    results: List[Dict[str, str]] = Field(description="Test results with values and units")
+    reference_ranges: List[str] = Field(description="Normal reference ranges")
+    abnormal_flags: List[str] = Field(description="Abnormal or critical values")
+    ordering_physician: str = Field(description="Physician who ordered tests")
+
+lab_extractor = LangStruct(schema=LabReportSchema)
+```
+
+## Example Categories
+
+### By Complexity
+
+#### Beginner Examples
+- **Person Extraction** - Names, ages, occupations
+- **Product Listings** - E-commerce product data
+- **Contact Information** - Emails, phone numbers, addresses
+- **Event Details** - Dates, locations, descriptions
+
+#### Intermediate Examples
+- **Financial Documents** - Earnings reports with metrics
+- **News Articles** - Entities, sentiment, key facts
+- **Academic Papers** - Authors, abstracts, methodologies
+- **Customer Reviews** - Ratings, sentiment, product aspects
+
+#### Advanced Examples
+- **Medical Records** - Clinical data extraction from medical documents
+- **Legal Contracts** - Risk analysis and compliance checking
+- **Scientific Literature** - Complex research data extraction
+- **Financial Analysis** - Multi-document portfolio analysis
+
+### By Data Volume
+
+#### Single Document Processing
+- **Resume Parsing** - Extract candidate information
+- **Invoice Processing** - Line items, totals, vendor details
+- **Email Analysis** - Sender, intent, action items
+
+#### Batch Processing
+- **Document Libraries** - Process hundreds of documents
+- **Compliance Monitoring** - Regular regulatory document analysis
+- **Content Migration** - Legacy system data extraction
+
+#### Real-time Processing
+- **Live Chat Analysis** - Customer service automation
+- **Social Media Monitoring** - Real-time sentiment analysis
+- **News Feed Processing** - Breaking news categorization
+
+## Production Examples
+
+### High-Volume Processing
+
+```python
+from langstruct import LangStruct
+
+class DocumentProcessor:
+    def __init__(self, schema):
+        self.extractor = LangStruct(schema=schema)
+
+    def process_batch(self, documents):
+        # Process multiple documents efficiently using built-in batch processing
+        results = self.extractor.extract(documents)
+        return results
+
+# Process many documents efficiently
+processor = DocumentProcessor(YourSchema)
+results = processor.process_batch(document_list)
+```
+
+### Error Handling and Validation
+
+```python
+def robust_extraction(text, extractor):
+    try:
+        result = extractor.extract(text)
+
+        # Validate extraction quality
+        if result.confidence < 0.8:
+            print(f"Low confidence: {result.confidence}")
+            # Handle low confidence extractions
+
+        return result
+
+    except Exception as e:
+        print(f"Extraction error: {e}")
+        # Handle extraction errors
+```
+
+### Simple Performance Tracking
+
+```python
+# Track basic extraction metrics
+def track_extraction_performance(text, extractor):
+    result = extractor.extract(text)
+
+    print(f"Extraction confidence: {result.confidence:.2f}")
+    print(f"Fields extracted: {len(result.entities)}")
+
+    # Check if source tracking is available
+    if hasattr(result, 'sources') and result.sources:
+        print(f"Source locations tracked: {len(result.sources)}")
+
+    return result
+
+# Usage
+result = track_extraction_performance(document_text, extractor)
+```
+
+## Best Practices from Examples
+
+### Schema Design
+
+- **Be Specific** - Use detailed field descriptions
+- **Use Types** - Leverage Python type hints for validation
+- **Nested Structure** - Model complex relationships with nested schemas
+- **Optional Fields** - Mark non-essential fields as optional
+
+### Error Handling
+
+- **Graceful Degradation** - Handle partial extractions
+- **Confidence Thresholds** - Set minimum confidence levels
+- **Fallback Strategies** - Define backup extraction approaches
+- **Logging** - Track errors for debugging and improvement
+
+### Performance Optimization
+
+- **Batch Processing** - Process multiple documents together
+- **Rate Limits** - Respect provider quotas with `rate_limit`
+- **Model Selection** - Choose appropriate models for your use case
+
+## Contributing Examples
+
+Want to contribute an example? We welcome contributions that demonstrate:
+
+- **Novel Use Cases** - New domains or applications
+- **Best Practices** - Production-ready implementations
+- **Performance Optimizations** - Efficient processing techniques
+- **Integration Patterns** - Working with other tools and systems
+
+[Submit an Example](https://github.com/langstruct/langstruct/discussions/new?category=examples)
+
+## Next Steps
+
+Ready to dive into specific examples?
+
+<CardGrid>
+	<Card title="Financial Documents" icon="star">
+		[Start with financial document processing](/examples/financial-documents/)
+	</Card>
+	<Card title="Medical Records" icon="heart">
+		[Explore healthcare applications](/examples/medical-records/)
+	</Card>
+	<Card title="Legal Contracts" icon="document">
+		[Learn legal document analysis](/examples/legal-contracts/)
+	</Card>
+	<Card title="All Examples" icon="open-book">
+		[Browse all available examples](/examples/)
+	</Card>
+</CardGrid>

@@ -1,0 +1,190 @@
+---
+// Features section component
+---
+
+<section class="py-20 bg-white dark:bg-gray-900">
+	<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+		<!-- Section header -->
+		<div class="text-center mb-16">
+			<h2 class="text-3xl font-bold text-gray-900 dark:text-white sm:text-4xl mb-4">
+				Why Choose LangStruct?
+			</h2>
+			<p class="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+				Built on DSPy's self-optimizing framework, LangStruct delivers superior extraction quality with minimal manual effort.
+			</p>
+		</div>
+
+		<!-- Features grid -->
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+			<!-- Self-Optimizing -->
+			<div class="card-hover text-center">
+				<div class="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg mb-4">
+					<svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+					</svg>
+				</div>
+				<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+					Self-Optimizing
+				</h3>
+				<p class="text-gray-600 dark:text-gray-300">
+					Automatic prompt and example optimization using DSPy's MIPROv2. No more manual prompt engineering.
+				</p>
+			</div>
+
+			<!-- Source Grounding -->
+			<div class="card-hover text-center">
+				<div class="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg mb-4">
+					<svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+					</svg>
+				</div>
+				<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+					Source Grounding
+				</h3>
+				<p class="text-gray-600 dark:text-gray-300">
+					Track exactly where each extracted value came from in the source text with precise character positions.
+				</p>
+			</div>
+
+			<!-- Schema Auto-Generation -->
+			<div class="card-hover text-center">
+				<div class="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg mb-4">
+					<svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+					</svg>
+				</div>
+				<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+					Smart Schema Generation
+				</h3>
+				<p class="text-gray-600 dark:text-gray-300">
+					Generate Pydantic schemas from examples automatically. Perfect field descriptions and type inference.
+				</p>
+			</div>
+
+			<!-- Validation & Quality -->
+			<div class="card-hover text-center">
+				<div class="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg mb-4">
+					<svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+					</svg>
+				</div>
+				<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+					Quality Validation
+				</h3>
+				<p class="text-gray-600 dark:text-gray-300">
+					Built-in validation system with actionable suggestions to improve extraction quality and confidence.
+				</p>
+			</div>
+
+			<!-- Export & Integration -->
+			<div class="card-hover text-center">
+				<div class="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-lg mb-4">
+					<svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2m-4-1v8m0 0l3-3m-3 3L9 8m-5 5h2.586a1 1 0 01.707.293l2.414 2.414a1 1 0 00.707.293H16"/>
+					</svg>
+				</div>
+				<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+					Easy Export
+				</h3>
+				<p class="text-gray-600 dark:text-gray-300">
+					Export results to CSV, JSON, pandas DataFrame, or custom formats. Seamless integration with your workflow.
+				</p>
+			</div>
+
+			<!-- Production Ready -->
+			<div class="card-hover text-center">
+				<div class="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-lg mb-4">
+					<svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+					</svg>
+				</div>
+				<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+					Production Ready
+				</h3>
+				<p class="text-gray-600 dark:text-gray-300">
+					Comprehensive testing, security audited, and designed for scale. Save and load optimized models.
+				</p>
+			</div>
+		</div>
+
+		<!-- Comparison section -->
+		<div class="mt-20">
+			<div class="text-center mb-10">
+				<h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+					LangStruct vs Manual Prompt Engineering
+				</h3>
+			</div>
+
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+				<!-- Manual Approach -->
+				<div class="card">
+					<div class="flex items-center mb-4">
+						<div class="h-8 w-8 bg-red-100 dark:bg-red-900/20 rounded-lg flex items-center justify-center mr-3">
+							<svg class="h-5 w-5 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+							</svg>
+						</div>
+						<h4 class="text-lg font-semibold text-gray-900 dark:text-white">Manual Prompt Engineering</h4>
+					</div>
+					<ul class="space-y-2 text-gray-600 dark:text-gray-300">
+						<li class="flex items-start">
+							<span class="text-red-500 mr-2">•</span>
+							Hours of manual prompt iteration
+						</li>
+						<li class="flex items-start">
+							<span class="text-red-500 mr-2">•</span>
+							Inconsistent extraction quality
+						</li>
+						<li class="flex items-start">
+							<span class="text-red-500 mr-2">•</span>
+							Fragile to input variations
+						</li>
+						<li class="flex items-start">
+							<span class="text-red-500 mr-2">•</span>
+							Hard to maintain and improve
+						</li>
+						<li class="flex items-start">
+							<span class="text-red-500 mr-2">•</span>
+							No source traceability
+						</li>
+					</ul>
+				</div>
+
+				<!-- LangStruct Approach -->
+				<div class="card bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900/10 dark:to-blue-900/10 border-green-200 dark:border-green-800">
+					<div class="flex items-center mb-4">
+						<div class="h-8 w-8 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center mr-3">
+							<svg class="h-5 w-5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+							</svg>
+						</div>
+						<h4 class="text-lg font-semibold text-gray-900 dark:text-white">LangStruct with DSPy</h4>
+					</div>
+					<ul class="space-y-2 text-gray-600 dark:text-gray-300">
+						<li class="flex items-start">
+							<span class="text-green-500 mr-2">•</span>
+							Automatic optimization in minutes
+						</li>
+						<li class="flex items-start">
+							<span class="text-green-500 mr-2">•</span>
+							Self-improving extraction quality
+						</li>
+						<li class="flex items-start">
+							<span class="text-green-500 mr-2">•</span>
+							Robust across diverse inputs
+						</li>
+						<li class="flex items-start">
+							<span class="text-green-500 mr-2">•</span>
+							Continuously optimizes with more data
+						</li>
+						<li class="flex items-start">
+							<span class="text-green-500 mr-2">•</span>
+							Full source grounding and confidence scores
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</div>
+</section>

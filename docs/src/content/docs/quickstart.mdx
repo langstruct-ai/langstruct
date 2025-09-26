@@ -1,0 +1,258 @@
+---
+title: Quick Start
+description: Extract structured data from text in 30 seconds
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Installation
+
+```bash
+pip install langstruct
+
+# Set up any API key:
+export OPENAI_API_KEY="sk-your-key"     # OpenAI
+export GOOGLE_API_KEY="your-key"        # Gemini
+export ANTHROPIC_API_KEY="sk-ant-key"   # Claude
+```
+
+## Your First Extraction
+
+```python
+from langstruct import LangStruct
+
+# Define schema by example
+extractor = LangStruct(example={
+    "company": "Apple Inc.",
+    "revenue": 125.3,
+    "quarter": "Q3 2024"
+})
+
+# Extract from text
+text = "Apple reported $125.3B revenue in Q3 2024, beating estimates."
+result = extractor.extract(text)
+
+print(result.entities)
+# {'company': 'Apple Inc.', 'revenue': 125.3, 'quarter': 'Q3 2024'}
+
+print(result.sources['revenue'])
+# [CharSpan(15, 22, '$125.3B')]
+```
+
+## Query Parsing for RAG
+
+```python
+from langstruct import LangStruct
+
+# Same instance for both extraction and parsing
+ls = LangStruct(example={
+    "company": "Apple Inc.",
+    "revenue": 125.3,
+    "quarter": "Q3 2024"
+})
+
+# Parse natural language
+query = "Q3 2024 tech companies over $100B discussing AI"
+result = ls.query(query)
+
+print(result.semantic_terms)
+# ['tech companies', 'AI']
+
+print(result.structured_filters)
+# {'quarter': 'Q3 2024', 'revenue': {'$gte': 100.0}}
+
+# Use with your vector DB
+vector_db.search(
+    query=' '.join(result.semantic_terms),
+    where=result.structured_filters  # Exact filtering!
+)
+```
+
+## DSPy Optimization (What Makes It Special)
+
+```python
+# LangStruct uses DSPy 3.0 for automatic optimization
+# No manual prompt engineering needed!
+
+# Traditional approach (manual prompts):
+prompt = "Extract company, revenue, quarter from: {text}"
+# Requires iterative tuning, breaks with new data
+
+# LangStruct approach (self-optimizing):
+extractor = LangStruct(example=schema)
+# Automatically optimizes prompts using MIPROv2
+# Improves with your data, no manual tuning
+
+# See optimization in action
+extractor.optimize(
+    texts=["training texts..."],
+    expected=[{"expected outputs..."}],
+    num_trials=50  # More trials = better accuracy
+)
+print(f"Optimized accuracy: {extractor.score:.1%}")
+```
+
+## Process Multiple Documents (with quotas)
+
+```python
+# Batch processing
+documents = [
+    "Apple Q3: $125.3B revenue",
+    "Microsoft Q3: $62.9B revenue",
+    "Google Q3: $88.2B revenue"
+]
+
+results = extractor.extract(
+  documents,
+  max_workers=8,
+  show_progress=True,
+  rate_limit=60
+)
+
+for result in results:
+    print(f"{result.entities['company']}: ${result.entities['revenue']}B")
+    print(f"Confidence: {result.confidence:.1%}\n")
+```
+
+## Debugging & Validation
+
+```python
+# Enable debug mode for detailed validation feedback
+result = extractor.extract(text, debug=True)
+# Shows detailed warnings when validation detects issues:
+# - Extraction quality scores
+# - Confidence assessments
+# - Suggestions for improvement
+# - Recommendations for optimization
+
+# Access validation details programmatically
+validation_report = result.validate_quality(schema=extractor.schema, text=text)
+print(f"Validation score: {validation_report.score:.1%}")
+print(f"Issues found: {len(validation_report.issues)}")
+print(f"Suggestions: {validation_report.suggestions}")
+```
+
+## Custom Schemas
+
+```python
+from pydantic import BaseModel, Field
+from typing import List, Optional
+
+class CompanySchema(BaseModel):
+    name: str
+    revenue: float = Field(gt=0, description="Revenue in billions")
+    quarter: str = Field(pattern=r"Q[1-4] \d{4}")
+    metrics: List[str] = []
+    profit_margin: Optional[float] = None
+
+extractor = LangStruct(schema=CompanySchema)
+# Full Pydantic validation and type safety
+```
+
+## Source Tracking & Visualization
+
+```python
+result = extractor.extract(text)
+
+# Character-level precision
+for field, spans in result.sources.items():
+    for span in spans:
+        print(f"{field}: '{text[span.start:span.end]}' at {span.start}-{span.end}")
+
+# Interactive visualization
+from langstruct import HTMLVisualizer
+viz = HTMLVisualizer()
+viz.save_visualization(text, result, "output.html")
+
+# JSONL round‑trip for datasets
+results = extractor.extract(documents, validate=False)
+extractor.save_annotated_documents(results, "extractions.jsonl")
+loaded = extractor.load_annotated_documents("extractions.jsonl")
+extractor.visualize(loaded, "results.html")
+
+# Debug mode for detailed validation feedback
+result = extractor.extract(text, debug=True)
+# Shows detailed validation warnings and suggestions when issues are detected
+```
+
+## Important Notes
+
+### DSPy 3.0 Dependency
+
+```python
+# LangStruct is built on DSPy 3.0
+# This provides:
+# - Automatic prompt optimization (MIPROv2)
+# - Multi-model support (OpenAI, Google, Anthropic, Ollama)
+# - Self-improving extraction quality
+
+# Note: DSPy is a research framework from Stanford
+```
+
+### Model Selection
+
+```python
+# Smart auto-detection based on available API keys
+# No model needed - it auto-detects from your environment!
+extractor = LangStruct(example=schema)
+
+# Or specify model explicitly
+extractor = LangStruct(
+    example=schema,
+    model="gemini/gemini-2.5-flash-lite"  # Fast & cheap
+)
+
+# Local models
+extractor = LangStruct(
+    example=schema,
+    model="ollama/llama3.2"  # No API needed
+)
+```
+
+## Complete Example
+
+```python
+from langstruct import LangStruct
+
+# 1. Single instance for both operations
+ls = LangStruct(example={
+    "company": "Apple",
+    "revenue": 100.0,
+    "quarter": "Q3"
+})
+
+# 2. Extract metadata from documents
+doc = "Apple reported $125B revenue in Q3 2024"
+metadata = ls.extract(doc).entities
+print(f"Extracted: {metadata}")
+
+# 3. Parse queries into filters
+query = "Q3 tech companies over $100B"
+filters = ls.query(query)
+print(f"Filters: {filters.structured_filters}")
+
+# 4. Use with your RAG system
+# vector_db.add(doc, metadata=metadata)
+# results = vector_db.search(
+#     query=filters.semantic_terms,
+#     where=filters.structured_filters
+# )
+```
+
+## Next Steps
+
+<CardGrid>
+	<Card title="RAG Integration" icon="rocket">
+		[Complete RAG enhancement guide](/rag-integration/)
+	</Card>
+	<Card title="Query Parsing" icon="magnifier">
+		[Advanced query parsing patterns](/query-parsing/)
+	</Card>
+	<Card title="Examples" icon="open-book">
+		[Real-world code examples](/examples/)
+	</Card>
+	<Card title="API Reference" icon="document">
+		[Complete API documentation](/api/)
+	</Card>
+</CardGrid>

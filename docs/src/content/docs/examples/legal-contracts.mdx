@@ -1,0 +1,468 @@
+---
+title: Legal Contract Analysis
+description: Analyze contracts, agreements, and legal documents for key terms, risks, and compliance requirements
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Extract key terms, obligations, risks, and compliance requirements from legal contracts, service agreements, NDAs, and other legal documents with high accuracy and reliability.
+
+## Legal Contract Schema
+
+Define comprehensive schemas for legal document analysis:
+
+```python
+from pydantic import BaseModel, Field
+from langstruct import LangStruct
+from typing import List, Optional, Dict
+from datetime import datetime
+
+class ContractPartySchema(BaseModel):
+    name: str = Field(description="Legal entity name")
+    type: str = Field(description="Entity type (corporation, individual, LLC, etc.)")
+    address: Optional[str] = Field(description="Legal address")
+    role: str = Field(description="Role in contract (client, vendor, licensor, etc.)")
+
+class ContractTermsSchema(BaseModel):
+    effective_date: Optional[str] = Field(description="Contract effective date")
+    expiration_date: Optional[str] = Field(description="Contract expiration date")
+    contract_value: Optional[float] = Field(description="Total contract value in USD")
+    payment_terms: Optional[str] = Field(description="Payment schedule and terms")
+    termination_clause: Optional[str] = Field(description="Contract termination conditions")
+    renewal_terms: Optional[str] = Field(description="Automatic renewal provisions")
+
+class LegalObligationSchema(BaseModel):
+    party: str = Field(description="Party responsible for obligation")
+    description: str = Field(description="Description of the obligation")
+    deadline: Optional[str] = Field(description="Deadline or timeline")
+    penalty: Optional[str] = Field(description="Penalty for non-compliance")
+
+class ContractRiskSchema(BaseModel):
+    risk_type: str = Field(description="Type of risk (financial, legal, operational)")
+    description: str = Field(description="Description of the risk")
+    severity: str = Field(description="Risk severity (low, medium, high, critical)")
+    mitigation: Optional[str] = Field(description="Risk mitigation measures")
+
+class LegalContractSchema(BaseModel):
+    contract_type: str = Field(description="Type of contract (service agreement, NDA, employment, etc.)")
+    title: str = Field(description="Contract title or subject")
+    parties: List[ContractPartySchema] = Field(description="All parties to the contract")
+    terms: ContractTermsSchema = Field(description="Key contract terms and conditions")
+    obligations: List[LegalObligationSchema] = Field(description="Key obligations for each party")
+    risks: List[ContractRiskSchema] = Field(description="Identified risks and concerns")
+    governing_law: Optional[str] = Field(description="Governing law jurisdiction")
+    dispute_resolution: Optional[str] = Field(description="Dispute resolution mechanism")
+    confidentiality: Optional[str] = Field(description="Confidentiality provisions")
+    liability_cap: Optional[str] = Field(description="Liability limitation clauses")
+```
+
+## Basic Legal Contract Extraction
+
+Create an extractor for legal document analysis:
+
+```python
+# Create the extractor with legal domain optimization
+extractor = LangStruct(
+    schema=LegalContractSchema,
+    model="gemini/gemini-2.5-flash-lite",  # Fast and reliable for legal analysis
+    optimize=True,
+    use_sources=True,  # Critical for legal document traceability
+    temperature=0.1,   # Lower temperature for consistency
+    max_retries=3      # Ensure reliability
+)
+
+# Example contract text
+contract_text = """
+SOFTWARE LICENSE AGREEMENT
+
+This Software License Agreement ("Agreement") is entered into on March 15, 2024,
+between TechCorp Inc., a Delaware corporation with offices at 123 Innovation Drive,
+San Francisco, CA 94105 ("Licensor"), and DataSystems LLC, a California limited
+liability company located at 456 Business Plaza, Los Angeles, CA 90210 ("Licensee").
+
+TERMS AND CONDITIONS:
+
+1. LICENSE GRANT: Licensor grants Licensee a non-exclusive, non-transferable license
+to use the Software for internal business purposes only.
+
+2. TERM: This Agreement shall commence on April 1, 2024, and continue for a period
+of three (3) years, automatically renewing for additional one-year terms unless
+terminated with 90 days written notice.
+
+3. FEES: Licensee shall pay Licensor $50,000 annually, due within 30 days of invoice.
+
+4. TERMINATION: Either party may terminate for material breach upon 30 days written
+notice if breach remains uncured.
+
+5. LIABILITY: Licensor's liability shall not exceed the fees paid in the 12 months
+preceding the claim.
+
+6. CONFIDENTIALITY: Both parties agree to maintain confidentiality of proprietary
+information for 5 years after agreement termination.
+
+7. GOVERNING LAW: This Agreement shall be governed by California state law.
+
+8. DISPUTES: Any disputes shall be resolved through binding arbitration in San Francisco, CA.
+"""
+
+# Extract contract information
+result = extractor.extract(contract_text)
+
+print("Contract Analysis:")
+print(f"Contract Type: {result.entities.contract_type}")
+print(f"Parties: {[party.name for party in result.entities.parties]}")
+print(f"Contract Value: ${result.entities.terms.contract_value:,.2f}")
+print(f"Term: {result.entities.terms.effective_date} to {result.entities.terms.expiration_date}")
+print(f"Key Risks: {len(result.entities.risks)} identified")
+
+# Show source grounding for compliance
+print("\nSource Grounding:")
+for field, spans in result.sources.items():
+    if spans:
+        print(f"{field}: Found at positions {spans[0].start}-{spans[0].end}")
+        print(f"  Text: '{spans[0].text[:100]}...'")
+```
+
+## Specialized Contract Types
+
+### Non-Disclosure Agreement (NDA)
+
+```python
+class NDASchema(BaseModel):
+    parties: List[ContractPartySchema] = Field(description="Disclosing and receiving parties")
+    confidential_info: str = Field(description="Definition of confidential information")
+    duration: str = Field(description="Confidentiality period duration")
+    permitted_uses: List[str] = Field(description="Permitted uses of confidential information")
+    return_requirement: Optional[str] = Field(description="Information return requirements")
+    exceptions: List[str] = Field(description="Exceptions to confidentiality")
+
+# Create NDA-specific extractor
+nda_extractor = LangStruct(schema=NDASchema)
+```
+
+### Employment Agreement
+
+```python
+class EmploymentSchema(BaseModel):
+    employee: ContractPartySchema = Field(description="Employee information")
+    employer: ContractPartySchema = Field(description="Employer information")
+    position: str = Field(description="Job title and role")
+    start_date: str = Field(description="Employment start date")
+    salary: float = Field(description="Annual salary in USD")
+    benefits: List[str] = Field(description="Employee benefits")
+    termination_conditions: List[str] = Field(description="Conditions for termination")
+    non_compete: Optional[str] = Field(description="Non-compete clause details")
+    non_solicitation: Optional[str] = Field(description="Non-solicitation provisions")
+
+employment_extractor = LangStruct(schema=EmploymentSchema)
+```
+
+### Service Agreement
+
+```python
+class ServiceAgreementSchema(BaseModel):
+    service_provider: ContractPartySchema = Field(description="Service provider details")
+    client: ContractPartySchema = Field(description="Client details")
+    services: List[str] = Field(description="Services to be provided")
+    deliverables: List[str] = Field(description="Expected deliverables")
+    timeline: str = Field(description="Project timeline")
+    payment_schedule: str = Field(description="Payment terms and schedule")
+    intellectual_property: str = Field(description="IP ownership provisions")
+    warranty: Optional[str] = Field(description="Service warranties")
+
+service_extractor = LangStruct(schema=ServiceAgreementSchema)
+```
+
+## Risk Assessment and Compliance
+
+### Automated Risk Detection
+
+```python
+from langstruct import LangStruct
+
+class ContractRiskAssessment(BaseModel):
+    financial_risks: List[str] = Field(description="Financial and monetary risks")
+    legal_risks: List[str] = Field(description="Legal and compliance risks")
+    operational_risks: List[str] = Field(description="Operational and performance risks")
+    reputational_risks: List[str] = Field(description="Reputational and brand risks")
+    overall_risk_level: str = Field(description="Overall risk assessment (low/medium/high/critical)")
+    recommended_actions: List[str] = Field(description="Recommended risk mitigation actions")
+
+risk_analyzer = LangStruct(
+    schema=ContractRiskAssessment,
+    model="gemini/gemini-2.5-flash-lite",
+    system_prompt="""You are a legal risk analyst. Identify potential risks in contracts
+    and provide actionable recommendations for risk mitigation. Focus on:
+    - Financial exposure and liability
+    - Compliance and regulatory risks
+    - Operational dependencies
+    - Termination and dispute resolution risks"""
+)
+
+# Analyze contract risks
+risk_analysis = risk_analyzer.extract(contract_text)
+print(f"Risk Level: {risk_analysis.entities.overall_risk_level}")
+print("Recommendations:", risk_analysis.entities.recommended_actions)
+```
+
+### Compliance Checking
+
+```python
+class ComplianceCheckSchema(BaseModel):
+    gdpr_compliance: bool = Field(description="GDPR compliance status")
+    data_protection: List[str] = Field(description="Data protection clauses")
+    jurisdiction_issues: List[str] = Field(description="Cross-jurisdiction concerns")
+    regulatory_requirements: List[str] = Field(description="Industry-specific requirements")
+    missing_clauses: List[str] = Field(description="Standard clauses that are missing")
+    compliance_score: float = Field(description="Compliance score from 0.0 to 1.0")
+
+compliance_checker = LangStruct(schema=ComplianceCheckSchema)
+compliance_result = compliance_checker.extract(contract_text)
+```
+
+## Batch Contract Processing
+
+Process multiple contracts efficiently:
+
+```python
+from pathlib import Path
+
+class ContractProcessor:
+    def __init__(self):
+        self.extractor = LangStruct(schema=LegalContractSchema)
+        self.risk_analyzer = LangStruct(schema=ContractRiskAssessment)
+
+    def process_contract_folder(self, folder_path: Path):
+        """Process all contracts in a folder using batch processing"""
+        results = []
+        contract_files = list(folder_path.glob("*.txt"))
+
+        # Read all contract texts
+        contract_texts = []
+        file_names = []
+
+        for contract_file in contract_files:
+            try:
+                contract_text = contract_file.read_text()
+                contract_texts.append(contract_text)
+                file_names.append(contract_file.name)
+            except Exception as e:
+                print(f"Error reading {contract_file}: {e}")
+
+        # Process all contracts in batches
+        contract_results = self.extractor.extract(contract_texts)
+        risk_results = self.risk_analyzer.extract(contract_texts)
+
+        # Combine results
+        for i, (contract_data, risk_data) in enumerate(zip(contract_results, risk_results)):
+            results.append({
+                'file': file_names[i],
+                'contract': contract_data,
+                'risks': risk_data,
+                'processed_at': datetime.now()
+            })
+
+        return results
+
+# Usage
+processor = ContractProcessor()
+contracts = processor.process_contract_folder(Path("./contracts/"))
+```
+
+## Contract Comparison and Analysis
+
+Compare multiple contracts for consistency:
+
+```python
+class ContractComparisonSchema(BaseModel):
+    common_terms: List[str] = Field(description="Terms common across all contracts")
+    differing_terms: List[str] = Field(description="Terms that differ between contracts")
+    missing_terms: List[str] = Field(description="Standard terms missing from some contracts")
+    risk_variations: List[str] = Field(description="Risk profile differences")
+    recommendations: List[str] = Field(description="Recommendations for standardization")
+
+def compare_contracts(contract_texts: List[str]):
+    comparison_text = "\n\n--- CONTRACT COMPARISON ---\n\n".join(
+        [f"CONTRACT {i+1}:\n{text}" for i, text in enumerate(contract_texts)]
+    )
+
+    comparator = LangStruct(schema=ContractComparisonSchema)
+    return comparator.extract(comparison_text)
+```
+
+## Export and Reporting
+
+Generate comprehensive contract reports:
+
+```python
+from langstruct.core.export_utils import ExportUtilities
+import json
+
+def generate_contract_report(extraction_result, output_path):
+    """Generate comprehensive contract analysis report"""
+
+    # Export as JSON with full source information
+    ExportUtilities.save_json(
+        extraction_result,
+        f"{output_path}.json",
+        include_metadata=True,
+        include_sources=True
+    )
+
+    # Create summary report as CSV for spreadsheet analysis
+    contract_summary = {
+        'contract_type': extraction_result.entities.contract_type,
+        'parties': '; '.join([party.name for party in extraction_result.entities.parties]),
+        'contract_value': extraction_result.entities.terms.contract_value,
+        'effective_date': extraction_result.entities.terms.effective_date,
+        'risk_count': len(extraction_result.entities.risks),
+        'obligations_count': len(extraction_result.entities.obligations),
+        'confidence': extraction_result.confidence
+    }
+
+    # Save summary as CSV (can be opened in Excel)
+    ExportUtilities.save_csv([extraction_result], f"{output_path}_summary.csv",
+                           include_metadata=True, include_sources=False)
+
+    print(f"Reports generated: {output_path}.json and {output_path}_summary.csv")
+
+# Generate report
+generate_contract_report(result, "contract_analysis_report")
+```
+
+## Key Benefits
+
+<CardGrid>
+	<Card title="Legal Accuracy" icon="approve-check">
+		Specialized for legal terminology and contract structures
+	</Card>
+	<Card title="Risk Identification" icon="random">
+		Automatically identify financial, legal, and operational risks
+	</Card>
+	<Card title="Source Tracking" icon="document">
+		Track exact source locations for legal verification
+	</Card>
+	<Card title="Batch Processing" icon="rocket">
+		Process hundreds of contracts efficiently with parallel processing
+	</Card>
+</CardGrid>
+
+## Use Cases
+
+### Corporate Legal Teams
+- **Contract Review** - Accelerate contract review and approval processes
+- **Risk Assessment** - Identify potential legal and financial risks
+- **Compliance Monitoring** - Ensure contracts meet regulatory requirements
+- **Template Standardization** - Analyze contract variations for standardization
+
+### Law Firms
+- **Due Diligence** - Extract key terms from acquisition target contracts
+- **Contract Migration** - Modernize and standardize legacy contracts
+- **Client Advisory** - Provide data-driven contract recommendations
+- **Dispute Preparation** - Quickly analyze contract terms for litigation
+
+### Procurement and Vendor Management
+- **Vendor Agreements** - Standardize vendor contract analysis
+- **Risk Management** - Assess supplier contract risks
+- **Compliance Tracking** - Monitor contract compliance obligations
+- **Cost Analysis** - Extract and analyze contract financial terms
+
+### Real Estate
+- **Lease Analysis** - Extract key terms from commercial leases
+- **Purchase Agreements** - Analyze real estate purchase contracts
+- **Property Management** - Process tenant agreements at scale
+- **Investment Analysis** - Extract financial terms for investment decisions
+
+## Best Practices
+
+### Schema Design for Legal Documents
+- **Use Optional Fields** - Many legal terms may not appear in all contracts
+- **Nested Structures** - Model complex relationships (parties, obligations)
+- **Specific Descriptions** - Use precise legal terminology in field descriptions
+- **Validation Rules** - Add business logic for legal requirement validation
+
+### Accuracy and Reliability
+- **Use GPT-5 or the latest flagships** - Legal analysis benefits from the most capable models
+- **Low Temperature** - Set temperature=0.1 for consistent legal interpretations
+- **Source Grounding** - Always enable for legal document traceability
+- **Human Review** - Implement human review workflows for critical contracts
+
+### Security and Compliance
+- **Data Protection** - Implement proper data handling for confidential contracts
+- **Access Control** - Restrict access to contract analysis systems
+- **Audit Logging** - Log all contract processing activities
+- **Retention Policies** - Follow legal requirements for document retention
+
+## Advanced Features
+
+### Custom Legal Prompts
+
+```python
+# Create domain-specific prompts for different contract types
+nda_prompt = """
+You are analyzing a Non-Disclosure Agreement (NDA). Focus on:
+1. Definition and scope of confidential information
+2. Permitted and prohibited uses
+3. Duration of confidentiality obligations
+4. Return or destruction requirements
+5. Exceptions to confidentiality (publicly known, independently developed)
+6. Remedies for breach (injunctive relief, damages)
+"""
+
+nda_extractor = LangStruct(
+    schema=NDASchema,
+    system_prompt=nda_prompt,
+    model="gemini/gemini-2.5-flash-lite"
+)
+```
+
+### Integration with Legal Systems
+
+```python
+# Integration with contract management systems
+class LegalSystemIntegration:
+    def __init__(self, api_key):
+        self.extractor = LangStruct(schema=LegalContractSchema)
+        self.api_key = api_key
+
+    def process_and_store(self, contract_text, contract_id):
+        # Extract contract data
+        result = self.extractor.extract(contract_text)
+
+        # Store in legal database
+        contract_data = {
+            'id': contract_id,
+            'extracted_data': result.entities.dict(),
+            'confidence': result.confidence,
+            'sources': result.sources,
+            'processed_at': datetime.now()
+        }
+
+        # Send to contract management system
+        return self.store_in_cms(contract_data)
+```
+
+## Next Steps
+
+Ready to start analyzing legal contracts?
+
+- **[Installation](/installation/)** - Install LangStruct in your legal tech stack
+- **[Source Grounding](/source-grounding/)** - Essential for legal document traceability
+- **[Optimization](/optimization/)** - Improve accuracy for your specific contract types
+- **[API Reference](/api/)** - Complete technical documentation
+
+<CardGrid>
+	<Card title="Try the Examples" icon="laptop">
+		Start with the sample contracts and schemas provided
+	</Card>
+	<Card title="Customize for Your Domain" icon="setting">
+		Adapt schemas and prompts for your specific legal practice
+	</Card>
+	<Card title="Implement Review Workflows" icon="approve-check">
+		Build human-in-the-loop processes for contract approval
+	</Card>
+	<Card title="Scale with Automation" icon="rocket">
+		Process large contract portfolios with batch processing
+	</Card>
+</CardGrid>

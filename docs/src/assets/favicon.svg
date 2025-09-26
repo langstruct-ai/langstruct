@@ -1,0 +1,30 @@
+<svg viewBox="0 0 24 24" fill="#3b82f6" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simplified version of the network pattern for favicon -->
+  <g transform="scale(0.8) translate(3, 3)">
+    <!-- Central cluster -->
+    <circle cx="12" cy="7" r="1.5"/>
+    <circle cx="7" cy="12" r="1.5"/>
+    <circle cx="17" cy="12" r="1.5"/>
+    <circle cx="12" cy="17" r="1.5"/>
+    <circle cx="12" cy="12" r="1"/>
+
+    <!-- Outer ring -->
+    <circle cx="5" cy="5" r="1"/>
+    <circle cx="19" cy="5" r="1"/>
+    <circle cx="5" cy="19" r="1"/>
+    <circle cx="19" cy="19" r="1"/>
+
+    <!-- Connection lines -->
+    <g stroke="#3b82f6" stroke-width="1" fill="none" opacity="0.7">
+      <line x1="12" y1="7" x2="12" y2="12"/>
+      <line x1="7" y1="12" x2="12" y2="12"/>
+      <line x1="17" y1="12" x2="12" y2="12"/>
+      <line x1="12" y1="17" x2="12" y2="12"/>
+
+      <line x1="5" y1="5" x2="7" y2="12"/>
+      <line x1="19" y1="5" x2="17" y2="12"/>
+      <line x1="5" y1="19" x2="7" y2="12"/>
+      <line x1="19" y1="19" x2="17" y2="12"/>
+    </g>
+  </g>
+</svg>

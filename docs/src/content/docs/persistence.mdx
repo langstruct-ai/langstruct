@@ -1,0 +1,339 @@
+---
+title: Save & Load Extractors
+description: Persist and share LangStruct extractors with full state preservation
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+LangStruct extractors can be saved and loaded with complete state preservation, including optimized prompts, refinement configurations, and all DSPy module state. This enables:
+
+- **Training once, deploying everywhere**: Save optimized extractors for production use
+- **Team collaboration**: Share extractors across development teams
+- **Version control**: Track extractor versions alongside code
+- **Cost efficiency**: Avoid re-optimization on every deployment
+
+## Quick Start
+
+<Tabs>
+<TabItem label="Basic Save/Load">
+
+```python
+from langstruct import LangStruct
+
+# Create and configure extractor
+extractor = LangStruct(example={
+    "company": "Apple Inc.",
+    "revenue": 125.3,
+    "quarter": "Q3 2024"
+})
+
+# Save the extractor (creates directory structure)
+extractor.save("./my_extractor")
+
+# Load anywhere (API keys must be available)
+loaded_extractor = LangStruct.load("./my_extractor")
+
+# Works exactly like the original
+result = loaded_extractor.extract("Microsoft reported $56B in Q1 2024")
+print(result.entities)
+# {'company': 'Microsoft', 'revenue': 56.0, 'quarter': 'Q1 2024'}
+```
+
+</TabItem>
+<TabItem label="With Optimization">
+
+```python
+from langstruct import LangStruct
+
+# Create extractor with optimization
+extractor = LangStruct(
+    example={"name": "John", "age": 30, "role": "engineer"},
+    optimize=True
+)
+
+# Train the extractor
+training_texts = ["Your domain-specific texts..."]
+expected_results = [{"name": "Expected outputs..."}]
+
+extractor.optimize(
+    texts=training_texts,
+    expected_results=expected_results,
+    num_trials=50
+)
+
+# Save optimized state
+extractor.save("./optimized_extractor")
+
+# Load preserves all optimizations
+loaded = LangStruct.load("./optimized_extractor")
+# Contains learned prompts and examples from optimization
+```
+
+</TabItem>
+<TabItem label="With Refinement">
+
+```python
+from langstruct import LangStruct, Refine
+
+# Create extractor with refinement configuration
+extractor = LangStruct(
+    example={"product": "iPhone", "rating": 4.5, "sentiment": "positive"},
+    refine=Refine(
+        strategy="bon_then_refine",
+        n_candidates=5,
+        max_refine_steps=2
+    )
+)
+
+# Save with refinement config
+extractor.save("./refined_extractor")
+
+# Load preserves refinement settings
+loaded = LangStruct.load("./refined_extractor")
+
+# Refinement works automatically
+result = loaded.extract(text, refine=True)  # Uses saved config
+```
+
+</TabItem>
+</Tabs>
+
+## What Gets Saved
+
+LangStruct saves complete extractor state in a clean directory structure:
+
+```
+my_extractor/
+├── langstruct_metadata.json    # Schema, model config, versions
+├── pipeline.json              # DSPy pipeline state (native format)
+├── optimizer_state.json       # Optimizer config (if optimization used)
+└── refinement_config.json     # Refinement settings (if configured)
+```
+
+### Preserved Components
+
+- **Schema Definition**: Both predefined and dynamically generated schemas
+- **DSPy Pipeline State**: Optimized prompts, learned examples, module parameters
+- **Model Configuration**: Model name and settings (API keys never saved)
+- **Chunking Configuration**: Text processing settings
+- **Optimization State**: Optimizer type and configuration
+- **Refinement Configuration**: Refinement strategy and parameters
+- **Source Grounding Settings**: Whether source tracking is enabled
+
+### Security & Best Practices
+
+- **API keys are never saved** for security
+- **Version compatibility checking** prevents silent failures
+- **Graceful fallbacks** for missing schemas or configuration
+- **Human-readable formats** for easy debugging and inspection
+
+## Advanced Usage
+
+### Schema Types
+
+<Tabs>
+<TabItem label="Dynamic Schema">
+
+```python
+# Schema generated from examples
+extractor = LangStruct(example={
+    "name": "Alice",
+    "skills": ["Python", "ML"]
+})
+
+extractor.save("./dynamic_schema_extractor")
+
+# Schema is reconstructed from saved JSON schema
+loaded = LangStruct.load("./dynamic_schema_extractor")
+```
+
+</TabItem>
+<TabItem label="Predefined Schema">
+
+```python
+from pydantic import BaseModel, Field
+
+class PersonSchema(BaseModel):
+    name: str = Field(description="Full name")
+    age: int = Field(description="Age in years")
+    location: str = Field(description="Current location")
+
+extractor = LangStruct(schema=PersonSchema)
+extractor.save("./predefined_schema_extractor")
+
+# Attempts to import original schema, falls back to reconstruction
+loaded = LangStruct.load("./predefined_schema_extractor")
+```
+
+</TabItem>
+</Tabs>
+
+### Version Compatibility
+
+```python
+# Version checking prevents major incompatibilities
+try:
+    extractor = LangStruct.load("./old_extractor")
+except PersistenceError as e:
+    print(f"Incompatible version: {e}")
+    # Handle migration or recreation
+```
+
+Version compatibility rules:
+- **Major version differences**: Not supported (raises error)
+- **Minor version differences**: Warning issued but loading continues
+- **Patch version differences**: Silent compatibility
+
+### Error Handling
+
+```python
+from langstruct.exceptions import PersistenceError
+
+try:
+    extractor = LangStruct.load("./my_extractor")
+except PersistenceError as e:
+    if "API key" in str(e):
+        print("Set required API key environment variable")
+    elif "version" in str(e):
+        print("Extractor version incompatible")
+    elif "corrupted" in str(e):
+        print("Save files corrupted or invalid")
+    else:
+        print(f"Unknown persistence error: {e}")
+```
+
+Common error scenarios:
+- Missing API keys for the saved model
+- Corrupted or missing save files
+- Version incompatibilities
+- Schema reconstruction failures
+
+## Production Deployment
+
+### Deployment Workflow
+
+```python
+# Development: Train and save
+extractor = LangStruct(schema=MySchema, optimize=True)
+extractor.optimize(training_data, expected_results)
+extractor.save("./production_extractor")
+
+# Production: Load and use
+def load_extractor():
+    return LangStruct.load("./production_extractor")
+
+# Use in API or service
+extractor = load_extractor()
+result = extractor.extract(incoming_text)
+```
+
+### Docker Integration
+
+```dockerfile
+# Dockerfile
+COPY ./saved_extractors /app/extractors
+ENV OPENAI_API_KEY=""  # Set at runtime
+
+# In application
+extractor = LangStruct.load("/app/extractors/my_extractor")
+```
+
+### Environment Configuration
+
+```python
+import os
+
+# Validate API keys before loading
+required_key = "OPENAI_API_KEY"  # Based on saved model
+if not os.getenv(required_key):
+    raise EnvironmentError(f"Missing {required_key}")
+
+extractor = LangStruct.load("./extractor")
+```
+
+## Best Practices
+
+### Save Organization
+
+```python
+# Organize saves by version/purpose
+extractor.save("./extractors/v1.0/invoice_processor")
+extractor.save("./extractors/production/customer_feedback")
+extractor.save("./extractors/staging/contract_analyzer")
+```
+
+### Validation After Load
+
+```python
+# Verify loaded extractor works as expected
+loaded = LangStruct.load("./my_extractor")
+
+# Quick validation
+test_text = "Known good input text"
+result = loaded.extract(test_text)
+assert result.confidence > 0.8, "Extractor confidence too low"
+
+# Schema validation
+expected_fields = {"field1", "field2", "field3"}
+actual_fields = set(loaded.schema.get_field_descriptions().keys())
+assert expected_fields == actual_fields, "Schema fields don't match"
+```
+
+### Backup and Recovery
+
+```python
+import shutil
+from pathlib import Path
+
+# Backup before updates
+save_path = Path("./my_extractor")
+backup_path = Path("./backups/my_extractor_backup")
+shutil.copytree(save_path, backup_path)
+
+# Update extractor
+extractor.optimize(new_training_data)
+extractor.save(str(save_path))
+
+# Rollback if needed
+if validation_fails():
+    shutil.rmtree(save_path)
+    shutil.copytree(backup_path, save_path)
+```
+
+
+## Migration Guide
+
+### Updating Extractors
+
+When LangStruct versions change:
+
+1. **Test compatibility** with existing saves
+2. **Backup critical extractors** before updating
+3. **Re-optimize if needed** for best performance
+4. **Update deployment scripts** for new API if changed
+
+```python
+# Migration script example
+def migrate_extractor(old_path, new_path):
+    try:
+        # Try loading with new version
+        extractor = LangStruct.load(old_path)
+
+        # Re-save in new format
+        extractor.save(new_path)
+        print(f"Migrated {old_path} → {new_path}")
+
+    except PersistenceError as e:
+        print(f"Migration failed for {old_path}: {e}")
+        # Handle manual migration
+```
+
+## Performance Considerations
+
+- **Loading time**: Proportional to DSPy pipeline complexity
+- **Save size**: Typically 10-100KB for basic extractors
+- **Optimization state**: Larger saves for heavily optimized extractors
+- **Network deployment**: Consider compression for remote deployment
+
+Save/load operations are designed to be fast and lightweight, suitable for production use cases including serverless deployments.

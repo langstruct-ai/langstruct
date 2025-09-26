@@ -1,0 +1,386 @@
+---
+title: Medical Records Processing
+description: Extract structured information from clinical notes, lab reports, and medical documents
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Process clinical notes, radiology reports, and medical documents to extract structured information for analysis and research.
+
+## Quick Start: Simple Medical Data Extraction
+
+Start with a basic example to extract key medical information:
+
+```python
+from langstruct import LangStruct
+
+# Create a simple medical extractor from an example
+extractor = LangStruct(example={
+    "patient_age": 45,
+    "chief_complaint": "chest pain",
+    "diagnosis": "myocardial infarction",
+    "medication": "aspirin"
+})
+
+# Extract from a clinical note
+text = """
+Patient: 45-year-old male presenting with acute chest pain.
+Assessment: Diagnosed with myocardial infarction.
+Treatment: Started on aspirin therapy.
+"""
+
+result = extractor.extract(text)
+print(result.entities)
+# {'patient_age': 45, 'chief_complaint': 'chest pain', 'diagnosis': 'myocardial infarction', 'medication': 'aspirin'}
+```
+
+## Comprehensive Medical Schema
+
+For production healthcare systems, define detailed schemas:
+
+```python
+from pydantic import BaseModel, Field
+from langstruct import LangStruct
+from typing import List, Optional, Dict
+from datetime import datetime
+
+class PatientInfoSchema(BaseModel):
+    patient_id: Optional[str] = Field(description="Patient identifier (if present)")
+    age: Optional[int] = Field(description="Patient age")
+    gender: Optional[str] = Field(description="Patient gender")
+    admission_date: Optional[str] = Field(description="Hospital admission date")
+    discharge_date: Optional[str] = Field(description="Hospital discharge date")
+
+class DiagnosisSchema(BaseModel):
+    primary_diagnosis: str = Field(description="Primary medical diagnosis")
+    secondary_diagnoses: List[str] = Field(description="Additional diagnoses")
+    icd_codes: List[str] = Field(description="ICD-10 diagnostic codes")
+    severity: Optional[str] = Field(description="Condition severity (mild/moderate/severe)")
+
+class MedicalRecordSchema(BaseModel):
+    # Patient information
+    patient_info: PatientInfoSchema = Field(description="Patient demographic information")
+
+    # Clinical findings
+    chief_complaint: str = Field(description="Primary reason for visit/admission")
+    symptoms: List[str] = Field(description="Reported symptoms")
+    vital_signs: Dict[str, str] = Field(description="Vital sign measurements")
+
+    # Diagnoses
+    diagnoses: DiagnosisSchema = Field(description="Medical diagnoses")
+
+    # Treatment
+    medications: List[str] = Field(description="Prescribed medications")
+    procedures: List[str] = Field(description="Medical procedures performed")
+    treatment_plan: List[str] = Field(description="Ongoing treatment recommendations")
+
+    # Clinical notes
+    assessment: str = Field(description="Clinical assessment summary")
+    prognosis: Optional[str] = Field(description="Expected outcome")
+    follow_up: List[str] = Field(description="Follow-up instructions")
+
+    # Lab results (if present)
+    lab_results: Optional[Dict[str, str]] = Field(description="Laboratory test results")
+```
+
+## Clinical Note Processing
+
+Extract key information from clinical notes:
+
+```python
+# Create medical data extractor
+medical_extractor = LangStruct(
+    schema=MedicalRecordSchema,
+    model="gemini/gemini-2.5-flash-lite",  # Fast and reliable for medical analysis
+    temperature=0.0,  # Zero temperature for consistent medical analysis
+    use_sources=True  # Track sources for validation
+)
+
+# Sample clinical note (pre-sanitized for privacy)
+clinical_note = """
+PATIENT: [PATIENT_NAME_REDACTED] (MRN: [MRN_REDACTED])
+DOB: [DATE_REDACTED] AGE: 67 GENDER: Female
+ADMISSION DATE: 2024-03-15
+
+CHIEF COMPLAINT:
+Chest pain and shortness of breath
+
+HISTORY OF PRESENT ILLNESS:
+67-year-old female presented to ED with acute onset chest pain radiating to left arm,
+associated with dyspnea and diaphoresis. Symptoms started 2 hours prior to arrival.
+Patient has history of hypertension and hyperlipidemia.
+
+VITAL SIGNS:
+BP: 145/95 mmHg, HR: 98 bpm, RR: 22/min, O2 Sat: 94%, Temp: 98.6°F
+
+PHYSICAL EXAMINATION:
+Cardiovascular: Irregular rhythm, no murmurs
+Respiratory: Bilateral crackles at bases
+
+LABORATORY RESULTS:
+Troponin I: 2.4 ng/mL (elevated)
+CK-MB: 18 ng/mL (elevated)
+BNP: 450 pg/mL (elevated)
+
+ASSESSMENT AND PLAN:
+PRIMARY DIAGNOSIS: Acute ST-elevation myocardial infarction (STEMI) - Inferior wall
+SECONDARY DIAGNOSES:
+- Acute heart failure with preserved ejection fraction
+- Hypertension
+- Hyperlipidemia
+
+ICD-10 CODES:
+- I21.19 - ST elevation myocardial infarction involving other coronary vessel
+- I50.30 - Unspecified diastolic heart failure
+
+MEDICATIONS:
+- Aspirin 325mg daily
+- Metoprolol 25mg BID
+- Lisinopril 10mg daily
+- Atorvastatin 40mg daily
+
+PROCEDURES PERFORMED:
+- Cardiac catheterization with PCI to RCA
+- Echocardiogram
+
+TREATMENT PLAN:
+1. Continue dual antiplatelet therapy
+2. Optimize heart failure medications
+3. Cardiac rehabilitation referral
+4. Follow-up with cardiology in 1 week
+
+PROGNOSIS: Good with appropriate medical management
+"""
+
+# Extract medical information
+result = medical_extractor.extract(clinical_note)
+
+print("=== Medical Record Analysis ===")
+print(f"Primary Diagnosis: {result.entities.diagnoses.primary_diagnosis}")
+print(f"Medications: {len(result.entities.medications)} prescribed")
+print(f"Procedures: {len(result.entities.procedures)} performed")
+print(f"Confidence: {result.confidence:.2f}")
+```
+
+## Specialized Medical Schemas
+
+### Lab Report Processing
+
+```python
+class LabResultSchema(BaseModel):
+    patient_id: Optional[str] = Field(description="Patient identifier")
+    test_name: str = Field(description="Name of laboratory test")
+    result_value: str = Field(description="Test result value")
+    reference_range: Optional[str] = Field(description="Normal reference range")
+    units: Optional[str] = Field(description="Measurement units")
+    abnormal_flag: Optional[str] = Field(description="High/Low/Critical flag")
+
+class LabReportSchema(BaseModel):
+    patient_info: PatientInfoSchema = Field(description="Patient information")
+    test_date: str = Field(description="Date tests were performed")
+    lab_results: List[LabResultSchema] = Field(description="Individual test results")
+    ordering_physician: Optional[str] = Field(description="Physician who ordered tests")
+    critical_values: List[str] = Field(description="Critical or abnormal results")
+
+lab_extractor = LangStruct(schema=LabReportSchema)
+```
+
+### Radiology Report Processing
+
+```python
+class RadiologyReportSchema(BaseModel):
+    patient_info: PatientInfoSchema = Field(description="Patient information")
+    study_type: str = Field(description="Type of imaging study")
+    study_date: str = Field(description="Date of imaging study")
+    indication: str = Field(description="Clinical indication for study")
+    technique: str = Field(description="Imaging technique used")
+    findings: List[str] = Field(description="Radiological findings")
+    impression: str = Field(description="Radiologist's impression/conclusion")
+    recommendations: List[str] = Field(description="Recommended follow-up")
+
+radiology_extractor = LangStruct(schema=RadiologyReportSchema)
+```
+
+### Discharge Summary Processing
+
+```python
+class DischargeSummarySchema(BaseModel):
+    patient_info: PatientInfoSchema = Field(description="Patient information")
+    admission_diagnosis: str = Field(description="Admission diagnosis")
+    discharge_diagnosis: List[str] = Field(description="Final discharge diagnoses")
+    hospital_course: str = Field(description="Summary of hospitalization")
+    discharge_medications: List[str] = Field(description="Medications at discharge")
+    discharge_instructions: List[str] = Field(description="Patient discharge instructions")
+    follow_up_appointments: List[str] = Field(description="Scheduled follow-up care")
+    discharge_disposition: str = Field(description="Where patient was discharged to")
+
+discharge_extractor = LangStruct(schema=DischargeSummarySchema)
+```
+
+## Privacy Considerations
+
+When working with medical data, implement appropriate privacy protections:
+
+```python
+import re
+
+def sanitize_medical_text(text: str) -> str:
+    """Basic sanitization of sensitive information in medical text"""
+
+    # Note: This is a basic example - production systems need comprehensive detection
+    patterns_to_redact = {
+        'dates': r'\b\d{1,2}/\d{1,2}/\d{4}\b',
+        'phone': r'\b\d{3}-\d{3}-\d{4}\b',
+        'mrn': r'\bMRN:?\s*\d+\b',
+        'names': r'\b[A-Z][a-z]+ [A-Z][a-z]+\b'
+    }
+
+    sanitized = text
+    for pattern_name, pattern in patterns_to_redact.items():
+        sanitized = re.sub(pattern, f'[{pattern_name.upper()}_REDACTED]', sanitized, flags=re.IGNORECASE)
+
+    return sanitized
+
+# Example usage
+sanitized_text = sanitize_medical_text(clinical_note)
+result = medical_extractor.extract(sanitized_text)
+
+print("Extracted medical data from sanitized text:")
+print(f"Primary diagnosis: {result.entities.diagnoses.primary_diagnosis}")
+```
+
+
+## Batch Processing
+
+Process multiple medical records efficiently:
+
+```python
+from pathlib import Path
+
+class MedicalRecordProcessor:
+    def __init__(self):
+        self.extractor = LangStruct(schema=MedicalRecordSchema)
+
+    def process_medical_records(self, records_folder: Path):
+        """Process multiple medical records"""
+        record_files = list(records_folder.glob("*.txt"))
+
+        # Prepare documents for batch processing
+        documents = []
+        file_names = []
+
+        for record_file in record_files:
+            try:
+                record_text = record_file.read_text()
+                sanitized_text = sanitize_medical_text(record_text)
+                documents.append(sanitized_text)
+                file_names.append(record_file.name)
+            except Exception as e:
+                print(f"Error reading {record_file}: {e}")
+
+        # Process all documents in batch
+        results = self.extractor.extract(documents)
+
+        # Format results
+        processed_results = []
+        for i, result in enumerate(results):
+            processed_results.append({
+                'file': file_names[i],
+                'primary_diagnosis': result.entities.diagnoses.primary_diagnosis,
+                'medication_count': len(result.entities.medications),
+                'confidence': result.confidence,
+                'processed_at': datetime.now()
+            })
+
+        return processed_results
+
+# Usage
+processor = MedicalRecordProcessor()
+records = processor.process_medical_records(Path("./medical_records/"))
+```
+
+## Key Benefits
+
+<CardGrid>
+	<Card title="Medical Accuracy" icon="star">
+		Specialized for medical terminology and clinical concepts
+	</Card>
+	<Card title="Comprehensive Data" icon="document">
+		Extract diagnoses, medications, procedures, and lab results
+	</Card>
+	<Card title="Source Tracking" icon="random">
+		Track source locations for validation and verification
+	</Card>
+	<Card title="Batch Processing" icon="rocket">
+		Process large volumes of medical records efficiently
+	</Card>
+</CardGrid>
+
+## Use Cases
+
+### Healthcare Providers
+- **Clinical Decision Support** - Extract key information for physician review
+- **Quality Improvement** - Analyze patterns in diagnoses and treatments
+- **Research Data Collection** - Structure clinical data for medical research
+- **Coding and Billing** - Extract ICD codes and procedure information
+
+### Medical Research
+- **Retrospective Studies** - Extract data from historical medical records
+- **Clinical Trial Screening** - Identify eligible patients from EHR data
+- **Epidemiological Research** - Analyze disease patterns and outcomes
+- **Drug Safety Monitoring** - Track medication usage and adverse events
+
+### Health Insurance
+- **Claims Processing** - Extract relevant information for claim adjudication
+- **Medical Review** - Structure clinical information for review processes
+- **Risk Assessment** - Analyze patient risk factors and health status
+- **Fraud Detection** - Identify inconsistencies in medical documentation
+
+### Healthcare IT
+- **EHR Migration** - Extract structured data from legacy systems
+- **Data Standardization** - Convert unstructured notes to structured formats
+- **Clinical Documentation** - Assist with clinical note summarization
+- **Population Health** - Analyze patient populations and health trends
+
+## Best Practices
+
+### Schema Design for Medical Data
+- **Use Medical Terminology** - Include standard medical terms and abbreviations
+- **Handle Optional Fields** - Many medical elements may not be present in all records
+- **Validate Against Standards** - Use ICD-10, CPT, and other medical coding standards
+- **Consider Data Types** - Use appropriate types for dates, numeric values, and codes
+
+### Accuracy and Reliability
+- **Use Advanced Models** - Medical analysis benefits from GPT-5, GPT-4o, or other top-tier models
+- **Zero Temperature** - Set temperature=0.0 for consistent medical interpretations
+- **Source Tracking** - Always enable to validate extracted information
+- **Human Review** - Implement clinical review workflows for critical applications
+
+### Privacy and Security
+- **Data Sanitization** - Remove or anonymize sensitive information before processing
+- **Access Controls** - Restrict access to medical data processing systems
+
+## Next Steps
+
+Ready to start processing medical records?
+
+- **[Installation](/installation/)** - Set up LangStruct for medical applications
+- **[Source Grounding](/source-grounding/)** - Essential for medical data validation
+- **[Optimization](/optimization/)** - Improve accuracy for medical terminology
+- **[API Reference](/api/)** - Complete technical documentation
+
+<CardGrid>
+	<Card title="Start with Examples" icon="laptop">
+		Try the sample medical schemas with anonymized records
+	</Card>
+	<Card title="Implement Privacy Controls" icon="approve-check">
+		Set up proper PHI detection and anonymization processes
+	</Card>
+	<Card title="Build Review Workflows" icon="setting">
+		Create clinical review processes for extracted data
+	</Card>
+	<Card title="Scale Your Processing" icon="rocket">
+		Process large medical record collections with batch processing
+	</Card>
+</CardGrid>

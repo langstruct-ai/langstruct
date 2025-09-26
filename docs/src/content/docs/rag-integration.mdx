@@ -1,0 +1,87 @@
+---
+title: RAG Integration
+description: Boost Retrieval-Augmented Generation with LangStruct by attaching structured filters to your chunks and queries.
+---
+
+# RAG Integration
+
+LangStruct makes Retrieval-Augmented Generation precise. It extracts structured metadata from each chunk and mirrors that structure when users ask questions, so your RAG stack can combine semantic relevance **and** exact filters.
+
+## Why Add Structure?
+- **Hard filters:** Query by revenue, dates, regions, risk tags—whatever you extract.
+- **Consistent answers:** Only retrieve chunks that satisfy business constraints.
+- **Explainability:** Confidence scores and source spans prove where answers came from.
+
+## Minimal Pipeline
+
+```python
+from langchain_community.vectorstores import Chroma
+from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain.schema import Document
+from langstruct import LangStruct
+
+financial_example = {
+    "company": "Contoso Corp",
+    "quarter": "Q2 2024",
+    "revenue_numeric": 61.9,
+    "risks": ["Macro", "Competition"],
+}
+
+extractor = LangStruct(example=financial_example)
+embeddings = OpenAIEmbeddings()
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
+
+text = """
+Fabrikam posted $85.4B revenue in Q3 2024 with strong device demand.
+Regulators continue to review marketplace policies while supply chain risks remain.
+"""
+
+raw_doc = Document(page_content=text, metadata={"source": "apple_10q.txt"})
+chunks = text_splitter.split_documents([raw_doc])
+
+enhanced_docs = []
+for chunk in chunks:
+    result = extractor.extract(chunk.page_content)
+    enhanced_docs.append(
+        Document(
+            page_content=chunk.page_content,
+            metadata={
+                **chunk.metadata,
+                **result.entities,
+                "langstruct_confidence": result.confidence,
+            },
+        )
+    )
+
+vectorstore = Chroma.from_documents(enhanced_docs, embeddings)
+```
+
+## Querying with Filters
+
+```python
+query_result = extractor.query(
+    "Q3 2024 tech companies over $50B revenue discussing AI"
+)
+
+semantic_terms = " ".join(query_result.semantic_terms)  # drive embedding search
+filters = query_result.structured_filters                # exact metadata filters
+
+matches = vectorstore.similarity_search(
+    semantic_terms,
+    where=filters,
+    k=5,
+)
+
+for doc in matches:
+    print(doc.metadata["company"], doc.metadata.get("revenue_numeric"))
+```
+
+## Implementation Checklist
+1. **Pick fields** you want available for filtering (numbers, enums, tags).
+2. **Extract on ingest**: run LangStruct once per chunk and persist the metadata.
+3. **Decompose queries** with `extractor.query(...)` so you always get the same schema back.
+4. **Combine retrieval**: send semantic terms to your vector search, pass structured filters.
+5. **Log confidence & sources** to audit which spans drove each answer.
+
+That’s it, no sprawling pipeline required. Extract once, store the metadata, and every RAG query can enforce precise constraints.

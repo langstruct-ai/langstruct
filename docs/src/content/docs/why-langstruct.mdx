@@ -1,0 +1,213 @@
+---
+title: LangStruct vs LangExtract
+description: Technical comparison between LangStruct and Google's LangExtract for structured data extraction
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+# LangStruct vs LangExtract
+
+Both LangStruct and Google's LangExtract solve structured extraction with character-level source tracking. This page helps you choose between them based on your specific needs.
+
+## Core Philosophy Differences
+
+<CardGrid>
+  <Card title="LangStruct: Self-Optimizing" icon="star">
+    Uses DSPy to automatically improve prompts. No manual tuning needed - the system learns from your data.
+  </Card>
+  <Card title="LangExtract: Manual Optimization" icon="setting">
+    Requires manual few-shot examples and prompt engineering. You control and tune every aspect.
+  </Card>
+</CardGrid>
+
+This fundamental difference drives all other design decisions in both libraries.
+
+## Feature Comparison
+
+| Feature | LangStruct | LangExtract |
+|---------|------------|-----------|
+| **Optimization approach** | ✅ Automatic (DSPy MIPROv2) | ⚠️ Manual prompts/examples |
+| **Query parsing for RAG** | ✅ Query parsing included | ❌ Extraction only |
+| **Schema definition** | ✅ From examples or Pydantic | ⚠️ Prompt + examples (task spec) |
+| **Source grounding** | ✅ Character-level precision | ✅ Character-level precision |
+| **Performance improvement** | ✅ Self-improving with data | ⚠️ Depends on prompt/example tuning |
+| **Document chunking** | ✅ Smart semantic chunking | ✅ Parallel processing |
+| **Interactive visualization** | ✅ HTML with highlighting | ✅ HTML with highlighting |
+| **Model portability** | ✅ Auto-reoptimize for any model | ⚠️ Manual prompt retuning needed |
+| **Model support** | ✅ Any DSPy-compatible LM | ✅ Gemini, OpenAI, Ollama |
+| **GitHub stars** | ~500 (new) | 6.9k |
+| **Backed by** | Community | Google |
+
+_Comparison verified on 2025-09-10 against the latest LangExtract docs._
+For fair context, see LangExtract’s README and example guides:
+- Repository: https://github.com/google/langextract
+- Longer text example: https://github.com/google/langextract/blob/main/docs/examples/longer_text_example.md
+
+## Code Comparison
+
+### LangStruct Approach
+```python
+from langstruct import LangStruct
+
+# Define by example - no manual prompts
+extractor = LangStruct(example={
+    "company": "Apple Inc.",
+    "revenue": 125.3,
+    "quarter": "Q3 2024"
+})
+
+# Automatically optimizes with DSPy
+result = extractor.extract(text)
+print(result.sources)  # Character-level tracking
+```
+
+### LangExtract Approach
+```python
+from langextract import LangExtract
+
+# Manual prompt engineering required
+extractor = LangExtract(
+    model="gemini-1.5-flash",
+    schema={
+        "company": "string",
+        "revenue": "number",
+        "quarter": "string"
+    },
+    examples=[  # Manual few-shot examples
+        {"text": "...", "output": {...}},
+        {"text": "...", "output": {...}}
+    ]
+)
+
+result = extractor.extract(text)
+print(result.extractions[0].provenance)  # Character tracking
+```
+
+## When to Choose LangStruct
+
+### ✅ Choose LangStruct when you need:
+
+#### Automatic Optimization
+- Your extraction quality should improve over time
+- You don't want to manually tune prompts
+- You're processing domain-specific documents
+
+#### Query Parsing for RAG
+- You need to parse natural language queries into filters
+- You want bidirectional RAG (documents + queries)
+- You're building advanced search systems
+
+#### Schema from Examples
+- You prefer showing examples over writing schemas
+- You want quick prototyping
+- Your schema evolves frequently
+
+#### Self-Improving System
+- You have training data available
+- Accuracy matters more than initial setup speed
+- You want to optimize for your specific domain
+
+### ❌ Choose LangExtract when you need:
+
+#### Maximum Control
+- You want to control every prompt detail
+- You prefer manual optimization
+- You have prompt engineering expertise
+
+#### Google Ecosystem
+- You're heavily invested in Google Cloud
+- You primarily use Gemini models
+- You want Google's support and backing
+
+#### Medical/Healthcare Focus
+- LangExtract has specific optimizations for medical data
+- You need their pre-tuned medical examples
+- You're processing clinical documents
+
+#### Immediate Production Use
+- You need a mature, battle-tested library (6.9k stars)
+- You can't wait for DSPy optimization
+- You want extensive documentation and examples
+
+## Setup Comparison
+
+### Setup Time
+- **LangStruct**: Fast setup with automatic optimization
+- **LangExtract**: Manual example preparation needed
+
+### Accuracy
+- **LangStruct**: Self-optimizing with automatic performance tuning
+- **LangExtract**: Depends on manual tuning and examples
+
+### Token Efficiency
+- **LangStruct**: Optimizes token usage automatically
+- **LangExtract**: Token usage depends on manual prompt crafting
+
+## Model Switching: The Hidden Cost
+
+**Scenario:** Your company starts with OpenAI, then switches to Claude for cost reasons, then moves to local Llama for compliance.
+
+### With Traditional Libraries (LangExtract, etc.)
+```python
+# Month 1: Carefully tune prompts for OpenAI
+extractor = LangExtract(...)
+# Spend days crafting examples and prompt engineering
+
+# Month 6: Switch to Claude - everything breaks!
+# ❌ Prompts don't work the same way
+# ❌ Few-shot examples need rewriting  
+# ❌ Back to manual tuning for weeks
+
+# Month 12: Move to local Llama - start over again!
+# ❌ Different prompt format requirements
+# ❌ Re-engineer everything from scratch
+```
+
+### With LangStruct
+```python
+# Month 1: Set up once
+extractor = LangStruct(example=schema, optimize=True)
+extractor.optimize(training_data)
+
+# Month 6: Switch to Claude
+extractor = LangStruct(example=schema, model="claude-3-7-sonnet-latest")
+extractor.optimize(training_data)  # ✅ Same workflow
+
+# Month 12: Move to local Llama
+extractor = LangStruct(example=schema, model="ollama/llama3.2")
+extractor.optimize(training_data)
+```
+
+**Time saved:** Weeks → Minutes per model switch
+
+## The Bottom Line
+
+**LangStruct** and **LangExtract** both provide character-level source tracking and interactive visualizations. The key differences:
+
+- **LangStruct**: Auto-optimization + Model portability (future-proof)
+- **LangExtract**: Manual tuning + Vendor lock-in (technical debt)
+
+Choose LangStruct if you value your engineering time and want to avoid vendor lock-in.
+
+## Complementary Tools
+
+Note that other popular tools serve different purposes and work well WITH LangStruct:
+
+- **Instructor**: Great for general structured output from LLMs
+- **LangChain**: Comprehensive LLM application framework
+- **LlamaIndex**: Excellent for RAG and document indexing
+- **Unstructured**: Best for parsing complex document formats
+
+These aren't competitors - they solve different problems. LangStruct specifically competes with LangExtract in the "extraction with source tracking" space.
+
+## Try Both Libraries
+
+```bash
+# Try LangStruct
+pip install langstruct
+
+# Try LangExtract
+pip install langextract
+```
+
+Both are excellent libraries. Your choice depends on whether you prefer automatic optimization (LangStruct) or manual control (LangExtract).

@@ -1,0 +1,37 @@
+# Cloudflare Pages configuration
+name = "langstruct-docs"
+compatibility_date = "2024-01-01"
+
+[env.production]
+# Custom domain will be configured in Cloudflare dashboard
+# domain = "langstruct.dev"
+
+# Build configuration
+[build]
+command = "pnpm run build"
+cwd = "."
+watch_dir = "src"
+
+# Headers for better caching and security
+[[headers]]
+for = "/*"
+[headers.values]
+X-Frame-Options = "DENY"
+X-Content-Type-Options = "nosniff"
+Referrer-Policy = "strict-origin-when-cross-origin"
+Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
+for = "/_astro/*"
+[headers.values]
+Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+for = "*.css"
+[headers.values]
+Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+for = "*.js"
+[headers.values]
+Cache-Control = "public, max-age=31536000, immutable"

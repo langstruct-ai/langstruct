@@ -1,0 +1,113 @@
+[project]
+name = "langstruct"
+version = "0.1.0"
+description = "LLM-powered structured information extraction using DSPy optimization"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+authors = [{ name = "LangStruct Team" }]
+keywords = ["llm", "nlp", "extraction", "dspy", "structured-data"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "dspy>=3.0.0",
+    "pydantic>=2.0.0",
+    "tiktoken>=0.5.0",
+    "typing-extensions>=4.8.0",
+]
+
+[project.urls]
+Homepage = "https://langstruct.dev"
+Documentation = "https://langstruct.dev"
+Repository = "https://github.com/langstruct-ai/langstruct"
+Issues = "https://github.com/langstruct-ai/langstruct/issues"
+Changelog = "https://github.com/langstruct-ai/langstruct/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.5.0",
+    "pre-commit>=3.0.0",
+    # LLM provider packages for testing
+    "google-generativeai>=0.7.0", # For Google Gemini API calls
+    "openai>=1.0.0",              # For OpenAI API calls
+    "anthropic>=0.25.0",          # For Anthropic API calls
+]
+viz = ["streamlit>=1.28.0", "plotly>=5.15.0"]
+examples = [
+    # Dependencies needed to run example scripts
+    "chromadb>=0.4.0",                 # For RAG integration example
+    "langchain-community>=0.0.10",     # For RAG integration example
+    "langchain-text-splitters>=0.0.1", # For text chunking in examples
+    "openai>=1.0.0",                   # For embeddings in RAG example
+]
+parallel = [
+    "tqdm>=4.66.0", # For progress bars in parallel processing
+]
+all = ["langstruct[dev,viz,examples,parallel]"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.black]
+line-length = 88
+target-version = ['py312']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.12"
+# Use strict mode for core logic, but allow flexibility for external integrations
+strict = false
+warn_return_any = false
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+disallow_subclassing_any = false
+no_implicit_optional = true
+
+# Ignore untyped external dependencies
+[[tool.mypy.overrides]]
+module = ["dspy.*"]
+ignore_missing_imports = true
+
+# Strict typing for core business logic modules
+[[tool.mypy.overrides]]
+module = ["langstruct.core.schemas", "langstruct.core.export_utils"]
+strict = true
+
+# Lenient checking for DSPy integration modules
+[[tool.mypy.overrides]]
+module = [
+    "langstruct.core.signatures",
+    "langstruct.core.modules",
+    "langstruct.core.schema_generator",
+    "langstruct.core.validation",
+    "langstruct.core.chunking",
+    "langstruct.optimizers.*",
+    "langstruct.providers.*",
+    "langstruct.api",
+]
+# Allow necessary flexibility for external library integration
+disallow_untyped_defs = false
+disallow_any_expr = false
+disallow_any_decorated = false
+disallow_any_explicit = false
+disallow_any_generics = false
+disallow_subclassing_any = false
+warn_return_any = false
+check_untyped_defs = false

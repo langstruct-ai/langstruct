@@ -1,0 +1,195 @@
+---
+title: DSPy Integration
+description: How LangStruct uses DSPy for structured text extraction
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+# DSPy Integration
+
+LangStruct uses DSPy 3.0 as its foundation for optimized text extraction. DSPy provides programmatic interfaces for language models that can be automatically optimized instead of manually tuned.
+
+## Core DSPy Components
+
+### Signatures
+
+DSPy signatures define structured interfaces for language model tasks:
+
+```python
+class ExtractPerson(dspy.Signature):
+    """Extract person information from text."""
+    text: str = dspy.InputField()
+    name: str = dspy.OutputField()
+    age: int = dspy.OutputField()
+```
+
+### Modules
+
+Modules compose signatures into reusable components:
+
+```python
+extraction_module = dspy.ChainOfThought(ExtractPerson)
+result = extraction_module(text="John Smith is 25 years old")
+```
+
+### Optimization with MIPROv2
+
+MIPROv2 (Multi-stage Instruction Proposal and Refinement Optimization) is DSPy's advanced optimization algorithm that automatically improves your extraction pipeline:
+
+<CardGrid>
+  <Card title="What MIPROv2 Does" icon="star">
+    - **Rewrites prompts** to be more effective for your specific data
+    - **Selects examples** that best demonstrate the extraction task
+    - **Tests combinations** of instructions and demonstrations
+    - **Iteratively improves** based on your training data
+  </Card>
+  <Card title="What You Get" icon="approve-check">
+    - **Better accuracy** without manual prompt engineering
+    - **Consistent results** across different text types
+    - **Faster setup** - just provide examples and let it optimize
+    - **Automatic tuning** when you change models or data
+  </Card>
+</CardGrid>
+
+```python
+optimizer = dspy.MIPROv2(metric=accuracy_metric)
+optimized_module = optimizer.compile(
+    student=extraction_module,
+    trainset=training_examples
+)
+```
+
+## LangStruct's DSPy Architecture
+
+### Extraction Pipeline
+
+LangStruct implements a modular extraction pipeline using DSPy components:
+
+<CardGrid>
+  <Card title="Manual Approach" icon="warning">
+    ```python
+    prompt = f"Extract data from: {text}"
+    result = llm.complete(prompt)
+    ```
+  </Card>
+  <Card title="LangStruct with DSPy" icon="approve-check">
+    ```python
+    class ExtractData(dspy.Signature):
+        text: str = dspy.InputField()
+        data: dict = dspy.OutputField()
+
+    extractor = dspy.ChainOfThought(ExtractData)
+    ```
+  </Card>
+</CardGrid>
+
+### Multi-Step Processing
+
+```python
+class ExtractionPipeline(dspy.Module):
+    def __init__(self):
+        super().__init__()
+        self.chunk = dspy.ChainOfThought(ChunkText)
+        self.extract = dspy.ChainOfThought(ExtractFromChunk)
+        self.validate = dspy.ChainOfThought(ValidateExtraction)
+        self.aggregate = dspy.ChainOfThought(AggregateResults)
+
+    def forward(self, document):
+        chunks = self.chunk(text=document)
+        extractions = [self.extract(chunk=c) for c in chunks]
+        validated = [self.validate(data=e) for e in extractions]
+        return self.aggregate(results=validated)
+```
+
+## How LangStruct Uses MIPROv2
+
+### Automatic Prompt Tuning
+
+LangStruct integrates MIPROv2 seamlessly - just call `optimize()` and it handles the rest:
+
+```python
+from langstruct import LangStruct
+
+# 1. Create extractor with your schema
+extractor = LangStruct(example={
+    "company": "Apple",
+    "revenue": 100.0,
+    "quarter": "Q3"
+})
+
+# 2. Let MIPROv2 optimize prompts and examples automatically
+extractor.optimize(
+    training_texts=["Apple reported $125B in Q3...", "Meta earned $40B..."],
+    expected_results=[
+        {"company": "Apple", "revenue": 125.0, "quarter": "Q3"},
+        {"company": "Meta", "revenue": 40.0, "quarter": "Q3"}
+    ]
+)
+
+# 3. Now it's optimized for your specific data!
+result = extractor.extract("Microsoft announced $65B revenue for Q4")
+```
+
+**Behind the scenes, MIPROv2:**
+- Generates multiple prompt variations for your extraction task
+- Tests different few-shot example combinations
+- Finds the best instruction wording for your data patterns
+- Optimizes the extraction pipeline end-to-end
+
+### Model Portability: The Ultimate Future-Proofing
+
+**The Problem:** Traditional extraction systems break when you change models. Prompts tuned for older GPT-4-era models fail on Claude or the GPT-5 lineup. Hand-crafted examples optimized for one model perform poorly on another.
+
+**The Solution:** DSPy + LangStruct automatically re-optimize for any model:
+
+```python
+# Start with OpenAI
+extractor = LangStruct(
+    example={"company": "Apple", "revenue": 100.0},
+    model="gpt-5-mini",
+    optimize=True
+)
+extractor.optimize(training_texts, expected_results)
+
+# 6 months later, switch to Claude - just two lines!
+extractor.model = "claude-3-7-sonnet-latest"
+extractor.optimize(training_texts, expected_results)  # Auto-reoptimizes prompts
+
+# Or use local models for privacy
+extractor.model = "ollama/llama3.2"
+extractor.optimize(training_texts, expected_results)  # Works the same way
+
+# Same accuracy, zero prompt rewriting, zero vendor lock-in
+```
+
+**Benefits:**
+- **No vendor lock-in** - Switch providers anytime
+- **Cost optimization** - Use any model that meets your accuracy needs
+- **Privacy flexibility** - Move to local models when regulations change
+- **Future-proof** - New models? Just change one line and re-optimize
+- **A/B testing** - Compare model performance scientifically
+
+## Source Attribution
+
+LangStruct extends DSPy signatures to include source tracking:
+
+```python
+class ExtractWithSources(dspy.Signature):
+    """Extract structured data with source attribution."""
+    text: str = dspy.InputField()
+    data: str = dspy.OutputField(desc="JSON formatted extraction")
+    sources: str = dspy.OutputField(desc="Character spans for each field")
+
+result = extractor.extract(text)
+# result.data contains structured information
+# result.sources contains character-level attribution
+```
+
+## Performance Metrics
+
+DSPy optimization can improve LangStruct performance:
+
+- **Accuracy**: Better results compared to manual prompts
+- **Consistency**: Reduced variance across different inputs
+- **Adaptability**: Automatic adjustment to new models/data
+- **Development time**: Faster optimization compared to manual tuning

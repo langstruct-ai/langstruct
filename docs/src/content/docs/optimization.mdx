@@ -1,0 +1,140 @@
+---
+title: Optimization
+description: Automatically improve extraction accuracy with simple optimization
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+Make your extraction more accurate with automatic optimization. LangStruct learns from your data to improve results without any manual prompt engineering.
+
+## The Easy Way
+
+**Enable optimization (configure optimizer) and then optimize with your data:**
+
+```python
+from langstruct import LangStruct
+
+# Create extractor with optimization enabled
+extractor = LangStruct(
+  example={
+    "name": "Dr. Sarah Johnson",
+    "age": 34,
+    "occupation": "data scientist"
+  },
+  optimize=True  # sets up optimizer; run .optimize(...) to train
+)
+```
+
+**Default behavior (faster startup, good baseline accuracy):**
+
+```python
+# No optimization - good for quick experiments
+extractor = LangStruct(example={"name": "John", "age": 30})
+# optimize=False by default - enables faster startup
+```
+
+## When You Have Training Data
+
+If you have examples of what good extraction looks like, run optimization explicitly:
+
+```python
+# Your training examples
+training_texts = [
+    "Dr. Sarah Johnson, 34, is a data scientist",
+    "Prof. Michael Chen, 45, teaches at MIT",
+    "Emma Wilson, 28, software engineer"
+]
+
+# What the results should look like
+good_results = [
+    {"name": "Dr. Sarah Johnson", "age": 34, "occupation": "data scientist"},
+    {"name": "Prof. Michael Chen", "age": 45, "occupation": "professor"},
+    {"name": "Emma Wilson", "age": 28, "occupation": "software engineer"}
+]
+
+# Train it to be better
+extractor.optimize(texts=training_texts, expected_results=good_results)
+
+# Now it's optimized for your specific use case
+result = extractor.extract("Jane Smith, 29, works as a designer")
+```
+
+## How Much Better?
+
+Optimization can significantly improve accuracy on real-world tasks:
+
+<CardGrid>
+	<Card title="Before Optimization" icon="warning">
+		Baseline performance - may miss details or have inconsistent format
+	</Card>
+	<Card title="After Optimization" icon="approve-check">
+		Improved performance - better information capture and consistency
+	</Card>
+</CardGrid>
+
+## Persisting Results
+
+Saving/loading an optimized extractor is not yet implemented.
+For now, re-run `optimize()` when you start up, or persist your training data and configuration.
+
+## Advanced (If You Need It)
+
+Most users don't need this, but if you want more control:
+
+```python
+# Fine-tune the optimization process
+extractor.optimize(
+    texts=training_texts,
+    expected_results=good_results,
+    num_trials=50,        # More trials = better results (takes longer)
+    validation_split=0.3  # Use 30% for testing improvements
+)
+```
+
+## Best Practices
+
+<CardGrid>
+	<Card title="Start Simple" icon="rocket">
+		Start without optimization for quick experiments, enable when you need accuracy
+	</Card>
+	<Card title="Quality Over Quantity" icon="star">
+		10 good training examples beats 100 poor ones
+	</Card>
+	<Card title="Test on Real Data" icon="approve-check">
+		Optimize with data similar to what you'll use in production
+	</Card>
+	<Card title="Save Your Work" icon="document">
+		Always save optimized extractors so you don't lose progress
+	</Card>
+</CardGrid>
+
+## Common Questions
+
+**Q: Do I always need training data?**  
+A: No! Optimization can work without training data, but providing examples improves results significantly.
+
+**Q: How long does optimization take?**  
+A: Usually 1-5 minutes for typical datasets (10-100 examples).
+
+**Q: Can I optimize an already optimized extractor?**  
+A: Yes! You can keep optimizing with new data as you get it.
+
+**Q: Will this make my extractions slower?**  
+A: No - optimization happens once during training. Production extraction speed is the same.
+
+**Q: What happens when I switch models?**  
+A: Just change the model and re-optimize! Same training data, same accuracy - zero prompt rewriting needed.
+
+## Next Steps
+
+<CardGrid>
+	<Card title="Try It Now" icon="laptop">
+		Create a LangStruct extractor and enable optimization when you need accuracy!
+	</Card>
+	<Card title="Source Grounding" icon="document">
+		[Track where information comes from](/source-grounding/)
+	</Card>
+	<Card title="Examples" icon="open-book">
+		[See optimization in real examples](/examples/)
+	</Card>
+</CardGrid>
