@@ -20,16 +20,6 @@ export default defineConfig({
           label: 'GitHub',
           href: 'https://github.com/langstruct-ai/langstruct',
         },
-        {
-          icon: 'discord',
-          label: 'Discord',
-          href: 'https://discord.gg/langstruct',
-        },
-        {
-          icon: 'twitter',
-          label: 'Twitter',
-          href: 'https://twitter.com/langstruct',
-        },
       ],
       sidebar: [
         {

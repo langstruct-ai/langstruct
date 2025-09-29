@@ -20,7 +20,7 @@ Thank you for your interest in contributing to LangStruct! We welcome contributi
    ```bash
    # With uv (recommended)
    uv sync --extra dev
-   
+
    # Or with pip
    pip install -e ".[dev]"
    ```
@@ -29,7 +29,7 @@ Thank you for your interest in contributing to LangStruct! We welcome contributi
    ```bash
    # Get a free API key from aistudio.google.com
    export GOOGLE_API_KEY="your-key-here"
-   
+
    # Or use OpenAI
    export OPENAI_API_KEY="your-key-here"
    ```
@@ -195,14 +195,14 @@ We follow these conventions:
 ```python
 def extract_entities(text: str, schema: Type[Schema]) -> ExtractionResult:
     """Extract structured entities from text using the provided schema.
-    
+
     Args:
         text: Input text to extract from
         schema: Pydantic schema defining extraction structure
-        
+
     Returns:
         ExtractionResult with entities and metadata
-        
+
     Raises:
         ExtractionError: If extraction fails
     """
@@ -222,7 +222,6 @@ Releases are automated via GitHub Actions when tags are pushed:
 
 - **GitHub Issues**: For bugs and feature requests
 - **Discussions**: For questions and general discussion
-- **Discord**: [Join our community](https://discord.gg/langstruct) (coming soon)
 
 ## Code of Conduct
 
