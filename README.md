@@ -5,11 +5,11 @@
 [![DSPy 3.0](https://img.shields.io/badge/DSPy-3.0+-orange.svg)](https://github.com/stanfordnlp/dspy)
 [![Docs](https://img.shields.io/badge/docs-langstruct.dev-blue.svg)](https://langstruct.dev)
 
-**Extract structured data from any text – no prompt engineering required**
+**Extract structured data from any text – automatically optimized for any LLM**
 
-You know when you have a pile of invoices, medical records, or contracts, and you need to pull out specific fields? That's what this does.
+You know when you have a pile of invoices, medical records, or contracts, and you need to pull out specific fields or metadata? That's what this does.
 
-Point it at messy text, show it an example of what you want, and get back typed JSON. Built on DSPy so it auto-optimizes the prompts for you.
+Point it at messy text, show it an example of what you want, and get back typed JSON. Built on DSPy so it auto-optimizes the prompts for you. You can even parse user queries into filters for your RAG system.
 
 ```python
 from langstruct import LangStruct
@@ -29,11 +29,11 @@ print(result.entities)
 
 ## Why use this
 
-- **Auto-optimizes prompts** – DSPy's MIPROv2 does the tuning for you, learns from your examples
+- **Auto-optimizes prompts** – DSPy's optimizers do the tuning for you, learns from your examples
 - **Type-safe with Pydantic** – Full validation and type hints
+- **End-to-end RAG** – Extract structured metadata from docs AND parse user queries into filters
 - **Shows sources** – Character-level mapping back to original text
 - **Works with any LLM** – OpenAI, Claude, Gemini, or local models. Switch providers without rewriting code.
-- **End-to-end RAG** – Extract structured metadata from docs AND parse user queries into filters
 
 We built this because we got tired of writing extraction code over and over. The DSPy foundation means your extractor improves with feedback, and you're not locked into one LLM provider.
 
@@ -43,7 +43,7 @@ We built this because we got tired of writing extraction code over and over. The
 pip install langstruct
 
 # You'll need an API key for any LLM provider
-export GOOGLE_API_KEY="your-key"  # Free tier: https://aistudio.google.com/app/apikey
+export GOOGLE_API_KEY="your-key"
 # OR
 export OPENAI_API_KEY="your-key"
 # OR
@@ -86,25 +86,38 @@ print(result.entities)  # {"name": "Dr. Sarah Johnson", "age": 34, "specialty": 
 print(result.confidence)  # 0.94
 ```
 
-## What it's good at
+## RAG integration
 
-We use this for:
-- Processing invoices, receipts, purchase orders
-- Extracting data from medical records and clinical notes
-- Parsing contracts for key terms and dates
-- Structuring customer feedback and reviews
-- Pulling metrics from financial reports
+If you're building a RAG system, LangStruct helps with both sides:
 
-Real example: One team processes 10k+ medical charts/month to extract diagnosis codes. Saves them ~40 hours/week vs manual review.
+**1. Extract structured metadata from documents:**
+```python
+metadata_extractor = LangStruct(example={
+    "company": "Apple Inc.",
+    "revenue": 125.3,
+    "quarter": "Q3 2024"
+})
 
-## What it's NOT good at
+# Add to your vector DB with structured filters
+metadata = metadata_extractor.extract(document).entities
+```
 
-- Real-time applications (LLM latency adds up)
-- Perfect accuracy on every extraction (it's an LLM, not a regex)
-- Complex tables with merged cells or unusual layouts
-- Documents where formatting is critical to meaning
+**2. Parse user queries into filters:**
+```python
+query = "Q3 2024 tech companies with revenue over $100B"
+parsed = metadata_extractor.query(query)
 
-For those cases you might want a traditional parser or OCR solution.
+print(parsed.semantic_terms)  # ["tech companies"]
+print(parsed.structured_filters)  # {"quarter": "Q3 2024", "revenue": {"$gte": 100.0}}
+
+# Now query your vector DB with both
+results = vector_db.search(
+    semantic=parsed.semantic_terms,
+    filters=parsed.structured_filters
+)
+```
+
+This gives you precise retrieval instead of just semantic search. See [RAG integration guide](https://langstruct.dev/rag-integration/) for details.
 
 ## Boost accuracy with refinement
 
@@ -145,38 +158,23 @@ results = extractor.extract(
 
 Handles retries with exponential backoff automatically.
 
-## RAG integration
+## What it's good at
 
-If you're building a RAG system, LangStruct helps with both sides:
+We use this for:
+- Processing invoices, receipts, purchase orders
+- Extracting data from medical records and clinical notes
+- Parsing contracts for key terms and dates
+- Structuring customer feedback and reviews
+- Pulling metrics from financial reports
 
-**1. Extract structured metadata from documents:**
-```python
-metadata_extractor = LangStruct(example={
-    "company": "Apple Inc.",
-    "revenue": 125.3,
-    "quarter": "Q3 2024"
-})
+## What it's NOT good at
 
-# Add to your vector DB with structured filters
-metadata = metadata_extractor.extract(document).entities
-```
+- Real-time applications (LLM latency adds up)
+- Perfect accuracy on every extraction (it's an LLM, not a regex)
+- Complex tables with merged cells or unusual layouts
+- Documents where formatting is critical to meaning
 
-**2. Parse user queries into filters:**
-```python
-query = "Q3 2024 tech companies with revenue over $100B"
-parsed = metadata_extractor.query(query)
-
-print(parsed.semantic_terms)  # ["tech companies"]
-print(parsed.structured_filters)  # {"quarter": "Q3 2024", "revenue": {"$gte": 100.0}}
-
-# Now query your vector DB with both
-results = vector_db.search(
-    semantic=parsed.semantic_terms,
-    filters=parsed.structured_filters
-)
-```
-
-This gives you precise retrieval instead of just semantic search. See [RAG integration guide](https://langstruct.dev/rag-integration/) for details.
+For those cases you might want a traditional parser or OCR solution.
 
 ## Comparison with alternatives
 
