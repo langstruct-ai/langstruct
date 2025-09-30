@@ -192,6 +192,8 @@ contract_data = extractor.extract(contract_text)
 # → {"term_length": "2 years", "termination_clause": true, "liability_cap": 1000000}
 ```
 
+**→ See [complete examples](https://langstruct.dev/examples/) for medical records, financial documents, and more.**
+
 ## 🚀 RAG System Enhancement
 
 **Transform your RAG system** from simple search to intelligent retrieval:
@@ -345,10 +347,10 @@ for field, spans in result.sources.items():
 
 LangStruct works with any LLM provider:
 
-- **Google Gemini**: gemini/gemini-2.5-flash, gemini/gemini-2.5-pro
-- **OpenAI**: gpt-5-pro, gpt-5-mini, gpt-4o, gpt-4o-mini
-- **Anthropic**: claude-opus-4-1, claude-sonnet-4-0, claude-3-7-sonnet-latest, claude-3-5-haiku-latest
-- **Local**: Any model via Ollama (llama3, mistral, etc.)
+- **Google Gemini**: Gemini Flash, Gemini Pro
+- **OpenAI**: GPT-5, GPT-4
+- **Anthropic**: Claude Opus, Claude Sonnet, Claude Haiku
+- **Local**: Any model via Ollama (Llama, Mistral, etc.)
 
 ## 🎨 Visualization & Export
 
