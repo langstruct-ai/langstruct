@@ -94,4 +94,4 @@ export OPENAI_API_KEY="sk-your-key-here"    # OpenAI
 export ANTHROPIC_API_KEY="sk-ant-key"       # Claude models
 ```
 
-For more provider options, see the [installation guide](../docs/src/content/docs/installation.mdx).
+For more provider options, see the [installation guide](https://langstruct.dev/installation/).

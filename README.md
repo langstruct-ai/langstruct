@@ -1,4 +1,4 @@
-# 🧠 LangStruct
+# LangStruct
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -7,273 +7,181 @@
 
 **Extract structured data from any text – no prompt engineering required**
 
-> **TL;DR:** Extract structured information from any text - documents, emails, reports, transcripts - into clean JSON data. No prompt engineering required. Built on DSPy 3.0 for automatic optimization.
+You know when you have a pile of invoices, medical records, or contracts, and you need to pull out specific fields? That's what this does.
 
-LangStruct turns messy, unstructured text into clean, typed, validated data. Whether you're processing medical records, financial documents, customer feedback, or legal contracts, LangStruct extracts exactly what you need with source tracking and confidence scores.
-
-
-## What LangStruct Does
-
-LangStruct extracts **structured information** from **unstructured text**:
-
-```
-Input (messy text)                    →  Output (clean data)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-"Dr. Smith diagnosed the 45-year-old  →  {
- patient with Type 2 diabetes and     →    "physician": "Dr. Smith",
- prescribed metformin 500mg twice     →    "patient_age": 45,
- daily. Follow-up in 3 months."       →    "diagnosis": "Type 2 diabetes",
-                                      →    "medication": "metformin",
-                                      →    "dosage": "500mg",
-                                      →    "frequency": "twice daily",
-                                      →    "followup": "3 months"
-                                      →  }
-```
-
-## Key Features
-
-### Core Capabilities
-- **Automatic Optimization**: Uses DSPy MIPROv2 for prompt optimization
-- **Refinement System**: Best-of-N + iterative improvement for 15-30% accuracy boost
-- **Source Tracking**: Character-level mapping of extracted data to source text
-- **Schema Generation**: Create Pydantic schemas from examples
-- **Type Safety**: Full Pydantic validation and type hints
-- **Model Support**: Compatible with OpenAI, Anthropic, Google, Ollama, and other LLMs
-- **Persistence**: Save and load extractors with full state preservation
-- **Visualization**: HTML output with source highlighting
-
-## Quick Example
-
-> **💡 LLM Access Needed**: LangStruct works with any LLM provider (free, paid, or local). **[Get free access →](https://aistudio.google.com/app/apikey)** or see [setup options](#api-key-setup) below.
+Point it at messy text, show it an example of what you want, and get back typed JSON. Built on DSPy so it auto-optimizes the prompts for you.
 
 ```python
 from langstruct import LangStruct
 
-# Define what you want to extract with a simple example
+# Just show an example of what you want
 extractor = LangStruct(example={
     "invoice_number": "INV-001",
     "amount": 1250.00,
     "due_date": "2024-03-15",
-    "line_items": ["Widget A", "Service B"]
 })
 
-# Extract from any text
-text = """
-Dear Customer,
-
-Your invoice INV-2024-789 for $3,450.00 is due on April 20th, 2024.
-
-Items:
-- Premium Widget Set
-- Installation Service
-- Extended Warranty
-
-Thank you for your business!
-"""
-
-result = extractor.extract(text)
+# Extract from any similar text
+result = extractor.extract("Invoice INV-2024-789 for $3,450 is due April 20th, 2024")
 print(result.entities)
-# {
-#   "invoice_number": "INV-2024-789",
-#   "amount": 3450.00,
-#   "due_date": "2024-04-20",
-#   "line_items": ["Premium Widget Set", "Installation Service", "Extended Warranty"]
-# }
-
-# Boost accuracy with refinement (15-30% improvement)
-result = extractor.extract(text, refine=True)
-print(f"Confidence: {result.confidence:.1%}")  # Higher confidence score
+# {"invoice_number": "INV-2024-789", "amount": 3450.00, "due_date": "2024-04-20"}
 ```
 
-## Quick Start
+## Why use this
 
-### 1. Get an API Key (Required)
+- **Auto-optimizes prompts** – DSPy's MIPROv2 does the tuning for you
+- **Type-safe with Pydantic** – Full validation and type hints
+- **Shows sources** – Character-level mapping back to original text
+- **Works with any LLM** – OpenAI, Claude, Gemini, or local models
 
-**Choose one option:**
+We built this because we got tired of writing extraction code over and over. The DSPy foundation means it actually gets better as you use it.
 
-<div align="center">
-
-| Provider       | Get Key                                                  | Best For                  |
-| -------------- | -------------------------------------------------------- | ------------------------- |
-| Google Gemini  | [Get Free Key →](https://aistudio.google.com/app/apikey) | Fast & generous free tier |
-| OpenAI         | [Get Key →](https://platform.openai.com/api-keys)        | GPT models                |
-| Anthropic      | [Get Key →](https://console.anthropic.com/)              | Claude models             |
-| Local (Ollama) | [Install Ollama →](https://ollama.ai/)                   | Privacy, no API needed    |
-
-</div>
-
-**Set your API key:**
-```bash
-# Google Gemini (free)
-export GOOGLE_API_KEY="your-key-here"
-
-# Or use others:
-export OPENAI_API_KEY="your-key-here"
-export ANTHROPIC_API_KEY="your-key-here"
-```
-
-### 2. Installation
-
-Install from PyPI:
+## Installation
 
 ```bash
-# uv (recommended)
-uv add langstruct
-
-# or pip
 pip install langstruct
 
-# Optional extras
-pip install langstruct[viz]        # Visualization tools (HTML helpers)
-pip install langstruct[examples]   # Example integrations (ChromaDB, LangChain)
-pip install langstruct[parallel]   # tqdm for nicer progress bars
-pip install langstruct[dev]        # Test and lint toolchain
-pip install langstruct[all]        # Everything above
+# You'll need an API key for any LLM provider
+export GOOGLE_API_KEY="your-key"  # Free tier: https://aistudio.google.com/app/apikey
+# OR
+export OPENAI_API_KEY="your-key"
+# OR
+export ANTHROPIC_API_KEY="your-key"
 ```
 
-### 3. Basic Usage
+Works with free tier APIs, paid providers, or local models (Ollama). See [docs](https://langstruct.dev/installation/) for all options.
 
+## Basic usage
+
+Two ways to define what you want:
+
+**Option 1: Show an example** (easiest)
 ```python
-from langstruct import LangStruct
-
-# Create an extractor from an example (simplest approach)
 extractor = LangStruct(example={
     "name": "Dr. Sarah Johnson",
     "age": 34,
-    "location": "Cambridge, Massachusetts",
-    "occupation": "cardiologist"
+    "specialty": "cardiology"
 })
+```
 
-# Extract structured data from text
-text = """
-Dr. Sarah Johnson is a 34-year-old cardiologist working at Boston General Hospital.
-She currently lives in Cambridge, Massachusetts, with her family.
-"""
+**Option 2: Use a Pydantic schema** (more control)
+```python
+from pydantic import BaseModel, Field
 
+class PersonSchema(BaseModel):
+    name: str = Field(description="Full name")
+    age: int
+    specialty: str = Field(description="Medical specialty")
+
+extractor = LangStruct(schema=PersonSchema)
+```
+
+Then extract:
+```python
+text = "Dr. Sarah Johnson, 34, is a cardiologist at Boston General."
 result = extractor.extract(text)
 
-print(result.entities)
-# Output: {
-#   "name": "Dr. Sarah Johnson",
-#   "age": 34,
-#   "location": "Cambridge, Massachusetts",
-#   "occupation": "cardiologist"
-# }
-
-print(f"Confidence: {result.confidence:.2%}")
-# Output: Confidence: 94%
+print(result.entities)  # {"name": "Dr. Sarah Johnson", "age": 34, "specialty": "cardiology"}
+print(result.confidence)  # 0.94
 ```
 
-That's it! LangStruct automatically handles schema generation, optimization, and source tracking.
+## What it's good at
 
-## 📚 Common Applications
+We use this for:
+- Processing invoices, receipts, purchase orders
+- Extracting data from medical records and clinical notes
+- Parsing contracts for key terms and dates
+- Structuring customer feedback and reviews
+- Pulling metrics from financial reports
 
-### 1. Data Pipeline Automation
-Extract structured data from documents for databases, analytics, or APIs:
+Real example: One team processes 10k+ medical charts/month to extract diagnosis codes. Saves them ~40 hours/week vs manual review.
+
+## What it's NOT good at
+
+- Real-time applications (LLM latency adds up)
+- Perfect accuracy on every extraction (it's an LLM, not a regex)
+- Complex tables with merged cells or unusual layouts
+- Documents where formatting is critical to meaning
+
+For those cases you might want a traditional parser or OCR solution.
+
+## Boost accuracy with refinement
+
+Add `refine=True` to get 15-30% better accuracy. It generates multiple candidates and picks the best one:
+
 ```python
-# Process invoices, receipts, reports, emails
-invoice_data = extractor.extract(invoice_pdf_text)
-# → {"invoice_no": "INV-2024-001", "amount": 5420.00, "due_date": "2024-03-15"}
+result = extractor.extract(text, refine=True)
+# Takes longer but significantly more accurate
 ```
 
-### 2. Content Analysis & Research
-Analyze transcripts, reviews, surveys, or social media:
+## Source tracking
+
+See exactly where each field came from:
+
 ```python
-# Extract insights from customer feedback
-feedback = extractor.extract(review_text)
-# → {"sentiment": "positive", "product_issues": [], "feature_requests": ["dark mode"]}
+for field, spans in result.sources.items():
+    for span in spans:
+        print(f"{field}: '{span.text}' at position {span.start}-{span.end}")
 ```
 
-### 3. Compliance & Validation
-Extract and validate required information from legal or regulatory documents:
+This is helpful for:
+- Debugging extraction issues
+- Building citation systems
+- Compliance/audit trails
+
+## Batch processing
+
 ```python
-# Check contracts for specific clauses
-contract_data = extractor.extract(contract_text)
-# → {"term_length": "2 years", "termination_clause": true, "liability_cap": 1000000}
+documents = [doc1, doc2, doc3, ...]  # Hundreds or thousands
+
+results = extractor.extract(
+    documents,
+    max_workers=8,         # Parallel processing
+    rate_limit=60,         # Respect API limits
+    show_progress=True     # Show progress bar
+)
 ```
 
-**→ See [complete examples](https://langstruct.dev/examples/) for medical records, financial documents, and more.**
+Handles retries with exponential backoff automatically.
 
-## 🚀 RAG System Enhancement
+## RAG integration
 
-**Transform your RAG system** from simple search to intelligent retrieval:
+If you're building a RAG system, LangStruct helps with both sides:
 
-> **Note**: LangStruct enhances ANY vector database or search system (Pinecone, Weaviate, Elasticsearch, etc.).
-
-### 1. Document → Structured Metadata
+**1. Extract structured metadata from documents:**
 ```python
-# Extract structured metadata from documents
-extractor = LangStruct(example={
+metadata_extractor = LangStruct(example={
     "company": "Apple Inc.",
     "revenue": 125.3,
     "quarter": "Q3 2024"
 })
 
-metadata = extractor.extract(document).entities
-# Now your documents have precise, filterable metadata
+# Add to your vector DB with structured filters
+metadata = metadata_extractor.extract(document).entities
 ```
 
-### 2. Query → Structured Filters
+**2. Parse user queries into filters:**
 ```python
-from langstruct import LangStruct
+query = "Q3 2024 tech companies with revenue over $100B"
+parsed = metadata_extractor.query(query)
 
-# Parse natural language queries into filters
-ls = LangStruct(example=same_schema)  # Same schema as extraction!
+print(parsed.semantic_terms)  # ["tech companies"]
+print(parsed.structured_filters)  # {"quarter": "Q3 2024", "revenue": {"$gte": 100.0}}
 
-query = "Show me Q3 2024 tech companies with revenue over $100B discussing AI investments"
-parsed = ls.query(query)
-
-print(parsed.semantic_terms)
-# ["tech companies", "AI investments", "artificial intelligence"]
-
-print(parsed.structured_filters)
-# {"quarter": "Q3 2024", "revenue": {"$gte": 100.0}}
-```
-
-### 3. Precise Retrieval
-```python
-# Combine semantic search with exact filters
-rag_results = vector_store.similarity_search(
-    query=' '.join(parsed.semantic_terms),  # Semantic search
-    where=parsed.structured_filters         # Exact filters
+# Now query your vector DB with both
+results = vector_db.search(
+    semantic=parsed.semantic_terms,
+    filters=parsed.structured_filters
 )
-# Returns only docs matching BOTH semantic AND structural requirements
 ```
 
-### Why RAG + LangStruct?
+This gives you precise retrieval instead of just semantic search. See [RAG integration guide](https://langstruct.dev/rag-integration/) for details.
 
-Traditional RAG systems struggle with **structured requirements**. LangStruct solves this:
-
-| Query                            | Traditional RAG                             | With LangStruct                       |
-| -------------------------------- | ------------------------------------------- | ------------------------------------- |
-| "invoices over $10k from Q3"     | Returns any document with "invoice" OR "Q3" | Returns ONLY invoices >$10k from Q3   |
-| "patients over 65 with diabetes" | Returns any medical document                | Returns ONLY matching patient records |
-| "contracts expiring in 2024"     | Returns any contract                        | Returns ONLY 2024 expirations         |
-
-See our [complete RAG integration guide](https://langstruct.dev/rag-integration/) for implementation.
-
-## 🌟 Where LangStruct Excels
-
-### Perfect for:
-- **📄 Document Processing**: Invoices, reports, forms, emails
-- **🏥 Healthcare**: Medical records, clinical notes, lab results
-- **💼 Financial**: Statements, filings, contracts, reports
-- **⚖️ Legal**: Contracts, agreements, regulations, cases
-- **🔬 Research**: Papers, patents, technical documentation
-- **🎯 Customer Data**: Reviews, feedback, support tickets
-
-### Key Advantages:
-- **No prompt engineering**: DSPy handles optimization automatically
-- **Type safety**: Pydantic schemas with full validation
-- **Source grounding**: Know exactly where each field came from
-- **Confidence scores**: Understand extraction reliability
-- **Model agnostic**: Works with any LLM provider
-
-## 📊 Comparison with Alternatives
+## Comparison with alternatives
 
 ### LangStruct vs LangExtract
 
-Both are excellent tools for structured extraction with different strengths:
+Both are solid for structured extraction. Here's how they differ:
 
 | Feature               | LangStruct                          | LangExtract                                          |
 | --------------------- | ----------------------------------- | ---------------------------------------------------- |
@@ -288,277 +196,96 @@ Both are excellent tools for structured extraction with different strengths:
 | **Performance**       | ✅ Self-optimizing                   | Depends on manual tuning                             |
 | **Project Type**      | Community open-source               | Google open-source                                   |
 
-Note: Comparison verified on 2025-09-10 against the latest LangExtract README and examples. See LangExtract: https://github.com/google/langextract and example walkthroughs (e.g., longer text extraction): https://github.com/google/langextract/blob/main/docs/examples/longer_text_example.md
+Use LangStruct if you want automatic optimization and don't want to tune prompts. Use LangExtract if you prefer direct control or want Google's backing.
 
-**Choose LangStruct if you want:**
-- Automatic optimization without prompt engineering
-- Best-of-N refinement for higher accuracy
-- Flexibility to define schemas from examples
-- Query parsing for RAG systems
-- Confidence scores for extraction quality
-- Support for any LLM provider
+## Advanced features
 
-**Choose LangExtract if you prefer:**
-- Direct control over prompts
-- Google's backing and support
-- Simpler architecture without DSPy
+Once you've got the basics working, there's more:
 
-## 🎯 Getting Started
-
-Once you're comfortable with the basics, you can:
-
-**Define Custom Schemas** for more control:
+**Custom optimization** on your data:
 ```python
-from pydantic import BaseModel, Field
-from langstruct import LangStruct
-
-class PersonSchema(BaseModel):
-    name: str = Field(description="Full name of the person")
-    age: int = Field(description="Age in years")
-    location: str = Field(description="Current location")
-
-extractor = LangStruct(schema=PersonSchema)
+extractor.optimize(
+    texts=your_examples,
+    expected_results=expected_outputs,
+    num_trials=50
+)
 ```
 
-**Process Multiple Documents** at once:
+**Save and reuse** extractors:
 ```python
-documents = [doc1, doc2, doc3]
-results = extractor.extract(documents)  # Handles batch processing automatically
-```
-
-**Save and Load Extractors** for reuse:
-```python
-# Save an optimized extractor (preserves all state)
 extractor.save("./my_extractor")
-
-# Load anywhere (API keys must be available in environment)
-loaded_extractor = LangStruct.load("./my_extractor")
-result = loaded_extractor.extract("New text")
+loaded = LangStruct.load("./my_extractor")
 ```
 
-**View Source Locations** to see where data came from:
-```python
-for field, spans in result.sources.items():
-    for span in spans:
-        print(f"{field}: '{span.text}' at chars {span.start}-{span.end}")
-```
-
-## 📋 Supported Models
-
-LangStruct works with any LLM provider:
-
-- **Google Gemini**: Gemini Flash, Gemini Pro
-- **OpenAI**: GPT-5, GPT-4
-- **Anthropic**: Claude Opus, Claude Sonnet, Claude Haiku
-- **Local**: Any model via Ollama (Llama, Mistral, etc.)
-
-## 🎨 Visualization & Export
-
-**Create Interactive Visualizations:**
+**Visualize extractions** with highlighted sources:
 ```python
 from langstruct import HTMLVisualizer
 
 viz = HTMLVisualizer()
-viz.save_visualization(text, result, "results.html")  # Shows highlighted sources
+viz.save_visualization(text, result, "output.html")
 ```
 
-**Export Results:**
-```python
-# Save to various formats
-result.save_json("data.json")
-extractor.export_batch(results, "data.csv")  # CSV, Excel, Parquet supported
-```
-
-**JSONL Round‑Trip + Visualization:**
-```python
-# Save annotated documents to JSONL
-results = extractor.extract(texts, validate=False)
-extractor.save_annotated_documents(results, "extractions.jsonl")
-
-# Load later
-loaded = extractor.load_annotated_documents("extractions.jsonl")
-
-# Generate interactive HTML
-extractor.visualize(loaded, "results.html")
-```
-
-## 🧵 Batch, Rate Limits, Retries
-
-LangStruct batches efficiently and helps respect provider quotas.
-
-```python
-# Control concurrency and quotas
-results = extractor.extract(
-    texts,
-    max_workers=8,        # Thread workers
-    show_progress=True,   # Requires langstruct[parallel]
-    rate_limit=60,        # Calls per minute
-    retry_failed=True     # Raise on failures or surface warnings
-)
-```
-
-- Retries: exponential backoff (3 attempts by default) for transient errors.
-- Rate limiting: simple token‑bucket; set `rate_limit=None` for unlimited.
-- Failures: when `retry_failed=False`, failures are warned and skipped; otherwise an exception summarizes first errors.
-
----
-
-## 🚀 Advanced Features
-
-### Optimization (For Power Users)
-
-LangStruct optimizes automatically, but you can fine-tune for your specific data:
-
-```python
-# Train on your examples
-training_texts = ["Your domain-specific texts..."]
-expected_results = [{"name": "Expected outputs..."}]
-
-extractor.optimize(
-    texts=training_texts,
-    expected_results=expected_results,
-    num_trials=50  # More trials = better results
-)
-
-# Evaluate performance
-scores = extractor.evaluate(test_texts, test_expected)
-print(f"Accuracy: {scores['accuracy']:.2%}")
-```
-
-### Refinement for Higher Accuracy
-
-Boost extraction accuracy by 15-30% with Best-of-N candidate selection and iterative improvement:
-
-```python
-# Simple refinement
-result = extractor.extract(text, refine=True)
-
-# Advanced refinement with custom configuration
-result = extractor.extract(text, refine={
-    "strategy": "bon_then_refine",  # Best-of-N + iterative improvement
-    "n_candidates": 5,              # Generate 5 candidates
-    "judge": "Prefer candidates that exactly match cited text spans",
-    "max_refine_steps": 2,
-    "budget": {"max_calls": 10}     # Cost control
-})
-
-print(f"Accuracy improvement: {result.confidence:.1%}")
-```
-
-### Custom Configuration
-
+**Process huge documents** with chunking:
 ```python
 from langstruct import ChunkingConfig
 
-# For large documents
 config = ChunkingConfig(
     max_tokens=1500,
     overlap_tokens=150,
     preserve_sentences=True
 )
 
-extractor = LangStruct(
-    schema=YourSchema,
-    model="gemini/gemini-2.5-flash",
-    chunking_config=config,
-    optimize=True  # Enabled for training data
+extractor = LangStruct(schema=YourSchema, chunking_config=config)
+```
+
+See [examples](https://langstruct.dev/examples/) for medical records, financial docs, legal contracts, and more.
+
+## Common issues
+
+**"No API key found"**
+```bash
+# Make sure it's exported in your current shell
+echo $GOOGLE_API_KEY
+
+# For persistence, add to ~/.bashrc or ~/.zshrc
+export GOOGLE_API_KEY="your-key"
+```
+
+**Rate limits / costs getting too high**
+```python
+# Control API usage
+results = extractor.extract(
+    texts,
+    rate_limit=30,           # Calls per minute
+    max_workers=2,           # Fewer parallel calls
+    refine=False             # Skip refinement to save calls
 )
 ```
 
-## 🔧 Troubleshooting
+**Low extraction quality**
+- Try `refine=True` for better accuracy
+- Use more specific field descriptions
+- Optimize on a few examples with `.optimize()`
 
-### API Key Issues
+## Contributing
 
-**Error: "No API keys found" or "Authentication failed"**
+We're open to contributions. If you find bugs or have ideas:
+- [Open an issue](https://github.com/langstruct-ai/langstruct/issues)
+- [Start a discussion](https://github.com/langstruct-ai/langstruct/discussions)
+- Submit a PR (see [CONTRIBUTING.md](CONTRIBUTING.md))
 
-1. **Check your API key is set:**
-   ```bash
-   echo $GOOGLE_API_KEY  # Should show your key
-   ```
-
-2. **Common fixes:**
-   ```bash
-   # Make sure you're using the right format
-   export GOOGLE_API_KEY="your-actual-key-here"  # No quotes in the key itself
-
-   # For persistent setup, add to your shell profile:
-   echo 'export GOOGLE_API_KEY="your-key"' >> ~/.bashrc
-   source ~/.bashrc
-   ```
-
-3. **Test your key works:**
-   ```python
-   import os
-   print("API key set:", bool(os.getenv("GOOGLE_API_KEY")))
-
-   # Quick test
-   from langstruct import LangStruct
-   ls = LangStruct(example={"name": "test"})
-   result = ls.extract("Hello John")  # Should work without errors
-   ```
-
-**Error: "Model not found" or "Rate limit exceeded"**
-
-- **Model not found**: Your API key might be for a different provider
-- **Rate limits**: Try a different model or wait a few minutes
-- **Billing**: Check your account has credits (OpenAI/Anthropic)
-
-### Installation Issues
-
-**Error: Package not found on PyPI**
-
-If you encounter package installation issues, try:
+Development setup:
 ```bash
-# Update pip and try again
-pip install --upgrade pip
-pip install langstruct
-
-# Or install from source for development
 git clone https://github.com/langstruct-ai/langstruct.git
 cd langstruct
 uv sync --extra dev
-uv pip install -e .
-```
-
-**Import errors or missing dependencies**
-
-```bash
-# Reinstall with all dependencies
-pip install -e ".[dev,examples,viz,parallel]"
-```
-
-### Getting Help
-
-- 🐛 **Bug reports**: [GitHub Issues](https://github.com/langstruct-ai/langstruct/issues)
-- 💬 **Questions**: [GitHub Discussions](https://github.com/langstruct-ai/langstruct/discussions)
-- 📖 **Documentation**: [langstruct.dev](https://langstruct.dev)
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [contributing guide](CONTRIBUTING.md) for details.
-
-### Development Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/langstruct.git
-cd langstruct
-
-# Install dependencies with uv
-uv sync --extra dev
-
-# Run tests
 uv run pytest
-
-# Format code
-uv run black . && uv run isort .
 ```
 
-## 📄 License
+## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT – see [LICENSE](LICENSE)
 
-## 🙏 Acknowledgments
+## Credits
 
-- Built on [DSPy](https://github.com/stanfordnlp/dspy) for self-optimizing LM pipelines
-- Uses [Pydantic](https://pydantic.dev) for type-safe schemas
+Built on [DSPy](https://github.com/stanfordnlp/dspy) for self-optimizing prompts and [Pydantic](https://pydantic.dev) for schemas.
