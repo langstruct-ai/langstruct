@@ -44,7 +44,7 @@ Input (messy text)                    →  Output (clean data)
 
 ## Quick Example
 
-> **⚠️ API Key Required**: You need an API key to run LangStruct. **[Get one free here →](https://aistudio.google.com/app/apikey)** or see [setup options](#api-key-setup) below.
+> **💡 LLM Access Needed**: LangStruct works with any LLM provider (free, paid, or local). **[Get free access →](https://aistudio.google.com/app/apikey)** or see [setup options](#api-key-setup) below.
 
 ```python
 from langstruct import LangStruct

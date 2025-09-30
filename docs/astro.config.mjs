@@ -14,6 +14,24 @@ export default defineConfig({
         src: './src/assets/logo.svg',
         replacesTitle: true,
       },
+      head: [
+        {
+          tag: 'script',
+          attrs: {
+            src: 'https://www.googletagmanager.com/gtag/js?id=G-T356R5ZM51',
+            async: true,
+          },
+        },
+        {
+          tag: 'script',
+          content: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-T356R5ZM51');
+          `,
+        },
+      ],
       social: [
         {
           icon: 'github',
