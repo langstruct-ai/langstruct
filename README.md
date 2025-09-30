@@ -29,12 +29,13 @@ print(result.entities)
 
 ## Why use this
 
-- **Auto-optimizes prompts** – DSPy's MIPROv2 does the tuning for you
+- **Auto-optimizes prompts** – DSPy's MIPROv2 does the tuning for you, learns from your examples
 - **Type-safe with Pydantic** – Full validation and type hints
 - **Shows sources** – Character-level mapping back to original text
-- **Works with any LLM** – OpenAI, Claude, Gemini, or local models
+- **Works with any LLM** – OpenAI, Claude, Gemini, or local models. Switch providers without rewriting code.
+- **End-to-end RAG** – Extract structured metadata from docs AND parse user queries into filters
 
-We built this because we got tired of writing extraction code over and over. The DSPy foundation means it actually gets better as you use it.
+We built this because we got tired of writing extraction code over and over. The DSPy foundation means your extractor improves with feedback, and you're not locked into one LLM provider.
 
 ## Installation
 
