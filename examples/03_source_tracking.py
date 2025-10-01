@@ -80,6 +80,17 @@ def main():
             print(char, end="")
         print("\n")
 
+        # Step 7: Generate interactive HTML visualization
+        print("\n7️⃣ Interactive HTML Visualization:")
+        print("   Generating visualization with source highlighting...")
+        html_file = "source_tracking_results.html"
+        extractor.visualize([result], html_file)
+        print(f"   ✅ Saved to {html_file}")
+        print("   Open this file in your browser to see:")
+        print("   • Extracted fields highlighted in the original text")
+        print("   • Interactive hover to see field names")
+        print("   • Color-coded spans for each field")
+
         print("\n🎉 Source tracking provides full transparency!")
         print("   Next: Try example 04_batch_processing.py for multiple documents")
 
