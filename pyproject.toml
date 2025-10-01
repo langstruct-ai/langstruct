@@ -1,6 +1,6 @@
 [project]
 name = "langstruct"
-version = "0.1.3"
+version = "0.1.4"
 description = "LLM-powered structured information extraction using DSPy optimization"
 readme = "README.md"
 license = "MIT"
@@ -39,12 +39,7 @@ dev = [
     "isort>=5.12.0",
     "mypy>=1.5.0",
     "pre-commit>=3.0.0",
-    # LLM provider packages for testing
-    "google-generativeai>=0.7.0", # For Google Gemini API calls
-    "openai>=1.0.0",              # For OpenAI API calls
-    "anthropic>=0.25.0",          # For Anthropic API calls
 ]
-viz = ["streamlit>=1.28.0", "plotly>=5.15.0"]
 examples = [
     # Dependencies needed to run example scripts
     "chromadb>=0.4.0",                 # For RAG integration example
@@ -55,7 +50,7 @@ examples = [
 parallel = [
     "tqdm>=4.66.0", # For progress bars in parallel processing
 ]
-all = ["langstruct[dev,viz,examples,parallel]"]
+all = ["langstruct[dev,examples,parallel]"]
 
 [build-system]
 requires = ["hatchling"]
