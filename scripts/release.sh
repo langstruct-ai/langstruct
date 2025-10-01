@@ -18,18 +18,23 @@ VERSION=$(grep "^version" pyproject.toml | cut -d'"' -f2)
 echo "✅ New version: v$VERSION"
 echo ""
 
-# 2. Commit version bump
+# 2. Update uv.lock with new version
+echo "🔒 Updating uv.lock..."
+uv sync
+echo ""
+
+# 3. Commit version bump and lock file
 echo "💾 Committing version bump..."
-git add pyproject.toml
+git add pyproject.toml uv.lock
 git commit -m "Bump version to v$VERSION"
 echo ""
 
-# 3. Create and push tag
+# 4. Create and push tag
 echo "🏷️  Creating tag v$VERSION..."
 git tag -a "v$VERSION" -m "Release v$VERSION"
 echo ""
 
-# 4. Push everything
+# 5. Push everything
 echo "⬆️  Pushing to GitHub..."
 git push origin main
 git push origin "v$VERSION"
