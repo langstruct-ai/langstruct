@@ -9,28 +9,28 @@ Make your extraction more accurate with automatic optimization. LangStruct learn
 
 ## The Easy Way
 
-**Enable optimization (configure optimizer) and then optimize with your data:**
+**Create an extractor (optionally choose the optimizer) and call `optimize()` when you're ready:**
 
 ```python
 from langstruct import LangStruct
 
-# Create extractor with optimization enabled
 extractor = LangStruct(
   example={
     "name": "Dr. Sarah Johnson",
     "age": 34,
     "occupation": "data scientist"
   },
-  optimize=True  # sets up optimizer; run .optimize(...) to train
+  optimizer="miprov2",  # default optimizer
 )
+
+# Later, once you have training data:
+# extractor.optimize(texts=training_texts, expected_results=good_results)
 ```
 
-**Default behavior (faster startup, good baseline accuracy):**
+**Quick experiments (skip optimization entirely):**
 
 ```python
-# No optimization - good for quick experiments
 extractor = LangStruct(example={"name": "John", "age": 30})
-# optimize=False by default - enables faster startup
 ```
 
 ## When You Have Training Data
@@ -74,8 +74,19 @@ Optimization can significantly improve accuracy on real-world tasks:
 
 ## Persisting Results
 
-Saving/loading an optimized extractor is not yet implemented.
-For now, re-run `optimize()` when you start up, or persist your training data and configuration.
+Save and load optimized extractors to reuse them without re-running optimization:
+
+```python
+# Save after optimization
+extractor.save("./my_extractor")
+
+# Load later
+from langstruct import LangStruct
+loaded = LangStruct.load("./my_extractor")
+
+# Use immediately - optimization is preserved
+result = loaded.extract("new text")
+```
 
 ## Advanced (If You Need It)
 
@@ -86,7 +97,6 @@ Most users don't need this, but if you want more control:
 extractor.optimize(
     texts=training_texts,
     expected_results=good_results,
-    num_trials=50,        # More trials = better results (takes longer)
     validation_split=0.3  # Use 30% for testing improvements
 )
 ```
@@ -110,26 +120,26 @@ extractor.optimize(
 
 ## Common Questions
 
-**Q: Do I always need training data?**  
-A: No! Optimization can work without training data, but providing examples improves results significantly.
+**Q: Do I always need training data?**
+A: You need example texts, but not necessarily expected outputs. If you don't provide `expected_results`, LangStruct uses the LLM's confidence ratings to optimize. Providing expected outputs significantly improves accuracy.
 
-**Q: How long does optimization take?**  
+**Q: How long does optimization take?**
 A: Usually 1-5 minutes for typical datasets (10-100 examples).
 
-**Q: Can I optimize an already optimized extractor?**  
-A: Yes! You can keep optimizing with new data as you get it.
+**Q: Can I optimize an already optimized extractor?**
+A: Yes, you can continue optimizing with new data as you collect it.
 
-**Q: Will this make my extractions slower?**  
-A: No - optimization happens once during training. Production extraction speed is the same.
+**Q: Will this make my extractions slower?**
+A: No - optimization happens once during training. Production extraction speed is unchanged.
 
-**Q: What happens when I switch models?**  
-A: Just change the model and re-optimize! Same training data, same accuracy - zero prompt rewriting needed.
+**Q: What happens when I switch models?**
+A: Change the model and re-optimize with the same training data. No prompt rewriting needed.
 
 ## Next Steps
 
 <CardGrid>
 	<Card title="Try It Now" icon="laptop">
-		Create a LangStruct extractor and enable optimization when you need accuracy!
+		Create a LangStruct extractor and enable optimization when you need accuracy.
 	</Card>
 	<Card title="Source Grounding" icon="document">
 		[Track where information comes from](/source-grounding/)

@@ -76,11 +76,11 @@ Create an extractor for research paper analysis:
 extractor = LangStruct(
     schema=ScientificPaperSchema,
     model="gemini/gemini-2.5-flash-lite",  # Fast and reliable for academic content
-    optimize=True,
     use_sources=True,  # Track where information was found
     temperature=0.2,   # Slightly higher for nuanced interpretation
     max_retries=3
 )
+# Later: extractor.optimize(training_texts, expected_results)
 
 # Example research paper text (excerpt)
 paper_text = """

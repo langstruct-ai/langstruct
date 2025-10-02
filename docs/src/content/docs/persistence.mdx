@@ -46,10 +46,9 @@ print(result.entities)
 ```python
 from langstruct import LangStruct
 
-# Create extractor with optimization
+# Create extractor
 extractor = LangStruct(
     example={"name": "John", "age": 30, "role": "engineer"},
-    optimize=True
 )
 
 # Train the extractor
@@ -58,8 +57,7 @@ expected_results = [{"name": "Expected outputs..."}]
 
 extractor.optimize(
     texts=training_texts,
-    expected_results=expected_results,
-    num_trials=50
+    expected_results=expected_results
 )
 
 # Save optimized state
@@ -215,7 +213,7 @@ Common error scenarios:
 
 ```python
 # Development: Train and save
-extractor = LangStruct(schema=MySchema, optimize=True)
+extractor = LangStruct(schema=MySchema)
 extractor.optimize(training_data, expected_results)
 extractor.save("./production_extractor")
 

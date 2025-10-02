@@ -44,14 +44,14 @@ This single query contains **three distinct types of information**:
     - Quarter: Q3 2024 (exact match)
     - Revenue: > $100B (numeric comparison)
     - Sector: Technology (category match)
-    
+
     These need **database-style filtering**, not semantic search
   </Card>
   <Card title="Semantic Content" icon="magnifier">
     **Conceptual topics for similarity search:**
     - "financial reports" (could be 10-K, earnings, statements)
     - "AI investments" (could be ML, artificial intelligence, neural networks)
-    
+
     These need **embedding-based semantic search**
   </Card>
   <Card title="Implicit Context" icon="information">
@@ -59,7 +59,7 @@ This single query contains **three distinct types of information**:
     - "Show me" implies retrieval intent
     - "companies" implies corporate entities
     - Plural suggests multiple results expected
-    
+
     These provide **query understanding context**
   </Card>
 </CardGrid>
@@ -86,14 +86,14 @@ results = vector_db.similarity_search(query_embedding)
 <Tabs>
   <TabItem label="Semantic Terms">
     **What they are:** Conceptual topics that benefit from semantic understanding
-    
+
     **Examples:**
     - "artificial intelligence" ≈ "AI" ≈ "machine learning"
     - "financial performance" ≈ "earnings" ≈ "fiscal results"
     - "customer satisfaction" ≈ "user happiness" ≈ "client feedback"
-    
+
     **How they work:** Converted to embeddings for similarity matching
-    
+
     **Best for:**
     - Finding conceptually related content
     - Handling synonyms and variations
@@ -101,15 +101,15 @@ results = vector_db.similarity_search(query_embedding)
   </TabItem>
   <TabItem label="Structured Filters">
     **What they are:** Exact constraints that must be precisely matched
-    
+
     **Examples:**
     - Date/Time: "Q3 2024", "after 2023", "last 30 days"
     - Numbers: "revenue > $100M", "5-10 employees", "top 3"
     - Categories: "tech sector", "approved status", "high priority"
     - Entities: "Apple Inc.", "California", "John Smith"
-    
+
     **How they work:** Converted to database-style filter operations
-    
+
     **Best for:**
     - Enforcing hard constraints
     - Filtering by exact values
@@ -129,7 +129,7 @@ Let's see how different queries naturally decompose:
 - **Structured filters:** `{"quarter": "Q3 2024", "sector": "Technology", "profitable": true}`
 - **Why it matters:** You want companies that ARE profitable (filter), not just ones that DISCUSS profitability
 
-#### Healthcare Query  
+#### Healthcare Query
 > "Patient records over 65 years old with diabetes showing improvement"
 
 - **Semantic terms:** `["showing improvement", "better outcomes"]`
@@ -216,7 +216,7 @@ print("📖 Explanation:", result.explanation)
     'revenue': {'$gte': 100.0}
 }
 💯 Confidence: 91.5%
-📖 Explanation: 
+📖 Explanation:
 Searching for: tech companies
 With filters:
   • quarter = Q3 2024
@@ -270,30 +270,30 @@ class EnhancedRAGSystem:
         # Same schema for both extraction and parsing!
         self.langstruct = LangStruct(example=schema_example)
         self.vectorstore = Chroma(embedding_function=OpenAIEmbeddings())
-    
+
     def index_document(self, text: str):
         """Extract metadata and index document"""
         # Extract structured metadata
         extraction = self.langstruct.extract(text)
-        
+
         # Index with both text and metadata
         self.vectorstore.add_texts(
             texts=[text],
             metadatas=[extraction.entities]
         )
-    
+
     def natural_query(self, query: str, k: int = 5):
         """Query using natural language"""
         # Parse query into components
         parsed = self.langstruct.query(query)
-        
+
         # Perform hybrid search
         results = self.vectorstore.similarity_search(
             query=' '.join(parsed.semantic_terms),
             k=k,
             filter=parsed.structured_filters
         )
-        
+
         return results, parsed.explanation
 
 # Usage
@@ -407,13 +407,13 @@ ls = LangStruct(example=your_schema)
 # Query with natural language
 def smart_search(query: str):
     parsed = ls.query(query)
-    
+
     results = collection.query(
         query_texts=parsed.semantic_terms,
         where=parsed.structured_filters,
         n_results=10
     )
-    
+
     return results
 ```
 
@@ -431,19 +431,19 @@ ls = LangStruct(example=your_schema)
 # Natural language query
 def pinecone_search(query: str):
     parsed = ls.query(query)
-    
+
     # Convert to Pinecone filter format
     pinecone_filter = {
-        f"metadata.{k}": v 
+        f"metadata.{k}": v
         for k, v in parsed.structured_filters.items()
     }
-    
+
     results = index.query(
         vector=embed(parsed.semantic_terms),
         filter=pinecone_filter,
         top_k=10
     )
-    
+
     return results
 ```
 
@@ -497,9 +497,8 @@ domain_ls = LangStruct(
         # Include synonyms in descriptions
         "earnings": 10.5,  # Also covers "profits", "income"
     },
-    # Can optimize for better accuracy
-    optimize=True
 )
+# Call domain_ls.optimize(...) with training examples when ready
 ```
 
 ## Performance Considerations
@@ -512,7 +511,7 @@ from functools import lru_cache
 class CachedLangStruct:
     def __init__(self, schema):
         self.ls = LangStruct(example=schema)
-        
+
     @lru_cache(maxsize=1000)
     def query_cached(self, query: str):
         """Cache frequently used queries"""

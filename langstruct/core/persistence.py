@@ -145,11 +145,10 @@ class ExtractorPersistence:
                 extractor = LangStruct(
                     schema=schema_class,
                     model=metadata.model_name,
-                    optimize=False,  # We'll handle optimization separately
                     chunking_config=chunking_config,
                     use_sources=metadata.use_sources,
                     **metadata.lm_config,
-                )
+                )  # Optimizer state restored separately
             except Exception as e:
                 raise PersistenceError(
                     f"Failed to recreate LangStruct instance. This may be due to missing API keys, "
@@ -444,12 +443,6 @@ class ExtractorPersistence:
                 auto=optimizer_state.get("auto", "light"),
                 num_threads=optimizer_state.get("num_threads", 4),
                 **optimizer_state.get("kwargs", {}),
-            )
-        elif optimizer_name == "bootstrap":
-            from ..optimizers.bootstrap import BootstrapOptimizer
-
-            extractor.optimizer = BootstrapOptimizer(
-                **optimizer_state.get("kwargs", {})
             )
 
     @classmethod

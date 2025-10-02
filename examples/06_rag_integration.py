@@ -69,8 +69,8 @@ class EnhancedRAGSystem:
             self.metadata_extractor = LangStruct(
                 example=extraction_schema,
                 # Model will use LangStruct's default unless specified
-                optimize=True,  # Enable auto-optimization
             )
+            # Call self.metadata_extractor.optimize(...) later with labeled data if needed
         except Exception as e:
             raise ValueError(
                 f"Failed to initialize LangStruct: {e}. "

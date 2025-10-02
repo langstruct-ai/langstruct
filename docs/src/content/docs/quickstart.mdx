@@ -87,10 +87,8 @@ extractor = LangStruct(example=schema)
 # See optimization in action
 extractor.optimize(
     texts=["training texts..."],
-    expected=[{"expected outputs..."}],
-    num_trials=50  # More trials = better accuracy
+    expected_results=[{"expected outputs..."}]  # Optional - uses confidence if omitted
 )
-print(f"Optimized accuracy: {extractor.score:.1%}")
 ```
 
 ## Process Multiple Documents (with quotas)

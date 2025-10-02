@@ -27,8 +27,9 @@ def main():
     print("=" * 40)
 
     try:
-        # Step 1: Create extractor with optimization enabled
-        print("\n1️⃣ Creating extractor with auto-optimization...")
+        # Step 1: Create extractor
+        print()
+        print("1️⃣ Creating extractor...")
         extractor = LangStruct(
             example={
                 "person_name": "Dr. Sarah Johnson",
@@ -36,9 +37,8 @@ def main():
                 "years_experience": 8,
                 "specialization": "interventional cardiology",
             },
-            optimize=True,  # Enable optimization for better accuracy
         )
-        print("✅ Extractor created with optimization enabled!")
+        print("✅ Extractor ready! Call optimize() once you have training data.")
 
         # Step 2: Initial extraction (baseline)
         print("\n2️⃣ Baseline extraction...")
@@ -143,7 +143,6 @@ def main():
                 extractor.optimize(
                     texts=training_texts,
                     expected_results=expected_results,
-                    num_trials=10,  # More trials → better results (higher cost)
                 )
                 did_optimize = True
                 print("   ✅ Optimization complete!")
