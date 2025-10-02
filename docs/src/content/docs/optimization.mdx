@@ -74,8 +74,19 @@ Optimization can significantly improve accuracy on real-world tasks:
 
 ## Persisting Results
 
-Saving/loading an optimized extractor is not yet implemented.
-For now, re-run `optimize()` when you start up, or persist your training data and configuration.
+Save and load optimized extractors to reuse them without re-running optimization:
+
+```python
+# Save after optimization
+extractor.save("./my_extractor")
+
+# Load later
+from langstruct import LangStruct
+loaded = LangStruct.load("./my_extractor")
+
+# Use immediately - optimization is preserved
+result = loaded.extract("new text")
+```
 
 ## Advanced (If You Need It)
 
@@ -110,25 +121,25 @@ extractor.optimize(
 ## Common Questions
 
 **Q: Do I always need training data?**
-A: No! Optimization can work without training data, but providing examples improves results significantly.
+A: You need example texts, but not necessarily expected outputs. If you don't provide `expected_results`, LangStruct uses the LLM's confidence ratings to optimize. Providing expected outputs significantly improves accuracy.
 
 **Q: How long does optimization take?**
 A: Usually 1-5 minutes for typical datasets (10-100 examples).
 
 **Q: Can I optimize an already optimized extractor?**
-A: Yes! You can keep optimizing with new data as you get it.
+A: Yes, you can continue optimizing with new data as you collect it.
 
 **Q: Will this make my extractions slower?**
-A: No - optimization happens once during training. Production extraction speed is the same.
+A: No - optimization happens once during training. Production extraction speed is unchanged.
 
 **Q: What happens when I switch models?**
-A: Just change the model and re-optimize! Same training data, same accuracy - zero prompt rewriting needed.
+A: Change the model and re-optimize with the same training data. No prompt rewriting needed.
 
 ## Next Steps
 
 <CardGrid>
 	<Card title="Try It Now" icon="laptop">
-		Create a LangStruct extractor and enable optimization when you need accuracy!
+		Create a LangStruct extractor and enable optimization when you need accuracy.
 	</Card>
 	<Card title="Source Grounding" icon="document">
 		[Track where information comes from](/source-grounding/)

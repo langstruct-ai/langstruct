@@ -119,7 +119,7 @@ extractor = LangStruct(example={
 
 # 2. Let MIPROv2 optimize prompts and examples automatically
 extractor.optimize(
-    training_texts=["Apple reported $125B in Q3...", "Meta earned $40B..."],
+    texts=["Apple reported $125B in Q3...", "Meta earned $40B..."],
     expected_results=[
         {"company": "Apple", "revenue": 125.0, "quarter": "Q3"},
         {"company": "Meta", "revenue": 40.0, "quarter": "Q3"}
@@ -148,15 +148,15 @@ extractor = LangStruct(
     example={"company": "Apple", "revenue": 100.0},
     model="gpt-5-mini",
 )
-extractor.optimize(training_texts, expected_results)
+extractor.optimize(texts=training_texts, expected_results=expected_results)
 
 # 6 months later, switch to Claude - just two lines!
 extractor.model = "claude-3-7-sonnet-latest"
-extractor.optimize(training_texts, expected_results)  # Auto-reoptimizes prompts
+extractor.optimize(texts=training_texts, expected_results=expected_results)  # Auto-reoptimizes prompts
 
 # Or use local models for privacy
 extractor.model = "ollama/llama3.2"
-extractor.optimize(training_texts, expected_results)  # Works the same way
+extractor.optimize(texts=training_texts, expected_results=expected_results)  # Works the same way
 
 # Same accuracy, zero prompt rewriting, zero vendor lock-in
 ```
