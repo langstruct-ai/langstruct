@@ -9,7 +9,7 @@ Make your extraction more accurate with automatic optimization. LangStruct learn
 
 ## The Easy Way
 
-**Create an extractor (optionally choose the optimizer) and call `optimize()` when you're ready:**
+**Create an extractor and call `optimize()` when you're ready:**
 
 ```python
 from langstruct import LangStruct
@@ -19,11 +19,10 @@ extractor = LangStruct(
     "name": "Dr. Sarah Johnson",
     "age": 34,
     "occupation": "data scientist"
-  },
-  optimizer="miprov2",  # default optimizer
+  }
 )
 
-# Later, once you have training data:
+# Later, once you have training data ready:
 # extractor.optimize(texts=training_texts, expected_results=good_results)
 ```
 
@@ -33,7 +32,7 @@ extractor = LangStruct(
 extractor = LangStruct(example={"name": "John", "age": 30})
 ```
 
-## When You Have Training Data
+## Optimizing with Training Data
 
 If you have examples of what good extraction looks like, run optimization explicitly:
 
@@ -59,6 +58,34 @@ extractor.optimize(texts=training_texts, expected_results=good_results)
 result = extractor.extract("Jane Smith, 29, works as a designer")
 ```
 
+## Optimizing with Confidence Scores
+
+Don't have labeled training data? No problem! You can optimize using just the texts and let LangStruct use the model's confidence scores:
+
+```python
+# Just provide the texts - no need for expected results
+training_texts = [
+    "Dr. Sarah Johnson, 34, is a data scientist",
+    "Prof. Michael Chen, 45, teaches at MIT",
+    "Emma Wilson, 28, software engineer",
+    "Dr. Lisa Park, 39, works in research",
+    "John Davis, 31, is a consultant"
+]
+
+# Optimize using confidence scores
+extractor.optimize(texts=training_texts)
+
+# The extractor learns from the patterns in your data
+result = extractor.extract("Jane Smith, 29, works as a designer")
+```
+
+**When to use this approach:**
+- You have lots of example texts but no labeled outputs
+- You want to improve extraction without manual annotation
+- You're exploring a new domain and need quick improvements
+
+**Note:** While confidence-based optimization works well, providing `expected_results` will give you better accuracy if you have the time to create them.
+
 ## How Much Better?
 
 Optimization can significantly improve accuracy on real-world tasks:
@@ -68,7 +95,7 @@ Optimization can significantly improve accuracy on real-world tasks:
 		Baseline performance - may miss details or have inconsistent format
 	</Card>
 	<Card title="After Optimization" icon="approve-check">
-		Improved performance - better information capture and consistency
+		Improved performance - better information capture and consistent formatting
 	</Card>
 </CardGrid>
 
