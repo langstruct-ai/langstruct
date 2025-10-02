@@ -20,7 +20,7 @@ echo ""
 
 # 2. Update uv.lock with new version
 echo "🔒 Updating uv.lock..."
-uv sync
+uv sync --extra dev
 echo ""
 
 # 3. Commit version bump and lock file
