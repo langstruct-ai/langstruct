@@ -87,8 +87,7 @@ extractor = LangStruct(example=schema)
 # See optimization in action
 extractor.optimize(
     texts=["training texts..."],
-    expected=[{"expected outputs..."}],
-    num_trials=50  # More trials = better accuracy
+    expected=[{"expected outputs..."}]
 )
 print(f"Optimized accuracy: {extractor.score:.1%}")
 ```

@@ -22,7 +22,6 @@ from .exceptions import (
     PersistenceError,
     ValidationError,
 )
-from .optimizers.bootstrap import BootstrapOptimizer
 from .optimizers.metrics import ExtractionMetrics
 from .optimizers.mipro import MIPROv2Optimizer
 from .parallel import ParallelProcessor, ProcessingResult
@@ -64,7 +63,6 @@ class LangStruct:
         self,
         schema: Optional[Type[Schema]] = None,
         model: Optional[Union[str, dspy.LM]] = None,
-        optimize: bool = False,
         optimizer: str = "miprov2",
         chunking_config: Optional[ChunkingConfig] = None,
         use_sources: bool = True,
@@ -84,8 +82,7 @@ class LangStruct:
             schema: Pydantic schema defining the extraction structure (optional)
             model: Model name or DSPy LM instance (defaults to "gpt-5-mini"; pass
                 "gpt-5-mini"/"gpt-5-pro" for the latest OpenAI models)
-            optimize: Whether to use automatic prompt optimization (default: False)
-            optimizer: Optimizer to use ("miprov2", "bootstrap")
+            optimizer: Optimizer to use when optimize() runs (default: "miprov2")
             chunking_config: Configuration for text chunking
             use_sources: Whether to include source grounding (default: True)
             example: Single example dict for auto schema generation (optional)
@@ -128,7 +125,6 @@ class LangStruct:
         schema = ensure_schema_class(schema)
 
         self.schema = schema
-        self.optimize = optimize
         self.optimizer_name = optimizer
         self.chunking_config = chunking_config or ChunkingConfig()
         self.use_sources = use_sources
@@ -166,7 +162,8 @@ class LangStruct:
         # Initialize the extraction pipeline (robust to monkeypatched constructors)
         pipeline_cls = core_modules.ExtractionPipeline
         try:
-            sig = inspect.signature(pipeline_cls)
+            # Inspect __init__ directly to get actual parameters (not dspy.Module's *args, **kwargs)
+            sig = inspect.signature(pipeline_cls.__init__)
         except (TypeError, ValueError):
             # Fallback if signature can't be inspected (e.g., C-extensions or mocks)
             sig = None
@@ -198,10 +195,8 @@ class LangStruct:
             except TypeError:
                 self.pipeline = pipeline_cls(schema)
 
-        # Initialize optimizer if requested
+        # Optimizer is created lazily when optimize() is called
         self.optimizer = None
-        if optimize:
-            self._initialize_optimizer()
 
         # Initialize refinement engine if requested
         self.refinement_engine = None
@@ -509,7 +504,13 @@ class LangStruct:
                 else self.refine_config
             )
 
-            if effective_refine and self.refinement_engine:
+            if effective_refine:
+                # Lazily initialize refinement engine if not already created
+                if self.refinement_engine is None:
+                    self.refinement_engine = RefinementEngine(
+                        self.schema, self.pipeline.extractor
+                    )
+
                 # Run refinement process
                 refined_result, trace = self.refinement_engine(text, effective_refine)
                 result = refined_result
@@ -580,7 +581,6 @@ class LangStruct:
         self,
         texts: List[str],
         expected_results: Optional[List[Dict]] = None,
-        num_trials: int = 20,
         validation_split: float = 0.2,
     ) -> "LangStruct":
         """Optimize extraction performance on provided data.
@@ -588,7 +588,6 @@ class LangStruct:
         Args:
             texts: Training texts for optimization
             expected_results: Optional ground truth results for supervised optimization
-            num_trials: Number of optimization trials to run
             validation_split: Fraction of data to use for validation
 
         Returns:
@@ -619,7 +618,6 @@ class LangStruct:
             val_texts=val_texts or train_texts,  # Use train if no val data
             train_expected=train_expected,
             val_expected=val_expected,
-            num_trials=num_trials,
         )
 
         self.pipeline = optimized_pipeline
@@ -802,7 +800,7 @@ class LangStruct:
             path: Directory path to save the extractor to (will be created if needed)
 
         Example:
-            >>> extractor = LangStruct(schema=PersonSchema, optimize=True)
+            >>> extractor = LangStruct(schema=PersonSchema)
             >>> extractor.optimize(train_texts, expected_results)
             >>> extractor.save("./my_extractor")
             >>> # Creates directory with all extractor components
@@ -847,11 +845,9 @@ class LangStruct:
         """Initialize the appropriate optimizer."""
         if self.optimizer_name.lower() == "miprov2":
             self.optimizer = MIPROv2Optimizer()
-        elif self.optimizer_name.lower() == "bootstrap":
-            self.optimizer = BootstrapOptimizer()
         else:
             raise ValueError(
-                f"Unknown optimizer: {self.optimizer_name}. Supported optimizers: miprov2, bootstrap"
+                f"Unknown optimizer: {self.optimizer_name}. Only 'miprov2' is supported."
             )
 
     def _parse_refine_config(
@@ -1114,5 +1110,5 @@ class LangStruct:
         return (
             f"LangStruct(schema={self.schema.__name__}, "
             f"model={self.lm.__class__.__name__}, "
-            f"optimize={self.optimize})"
+            f"optimizer_initialized={self.optimizer is not None})"
         )

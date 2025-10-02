@@ -66,11 +66,11 @@ Create an extractor for legal document analysis:
 extractor = LangStruct(
     schema=LegalContractSchema,
     model="gemini/gemini-2.5-flash-lite",  # Fast and reliable for legal analysis
-    optimize=True,
     use_sources=True,  # Critical for legal document traceability
     temperature=0.1,   # Lower temperature for consistency
     max_retries=3      # Ensure reliability
 )
+# Later: extractor.optimize(training_texts, expected_results)
 
 # Example contract text
 contract_text = """

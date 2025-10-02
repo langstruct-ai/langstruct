@@ -147,7 +147,6 @@ result = extractor.extract("Microsoft announced $65B revenue for Q4")
 extractor = LangStruct(
     example={"company": "Apple", "revenue": 100.0},
     model="gpt-5-mini",
-    optimize=True
 )
 extractor.optimize(training_texts, expected_results)
 

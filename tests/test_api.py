@@ -21,16 +21,14 @@ class TestLangStructAPI:
         assert issubclass(extractor.schema, person_schema)
         assert extractor.schema is not person_schema
         assert extractor.use_sources is True  # Default
-        assert extractor.optimize is False  # Default
+        assert extractor.optimizer is None
 
     def test_initialization_with_options(self, person_schema, mock_extraction_pipeline):
         """Test LangStruct initialization with custom options."""
-        extractor = LangStruct(
-            schema=person_schema, model="gpt-4o", optimize=True, use_sources=False
-        )
+        extractor = LangStruct(schema=person_schema, model="gpt-4o", use_sources=False)
 
         assert issubclass(extractor.schema, person_schema)
-        assert extractor.optimize is True
+        assert extractor.optimizer is None
         assert extractor.use_sources is False
 
     @integration_test
@@ -155,7 +153,7 @@ class TestLangStructAPI:
         extractor = LangStruct(schema=person_schema)
 
         assert issubclass(extractor.schema, person_schema)
-        assert extractor.optimize is False  # Default behavior
+        assert extractor.optimizer is None
         assert extractor.use_sources is True  # Should be enabled by auto
 
     def test_schema_wrapping_enforces_extra_forbid(self, mock_extraction_pipeline):
@@ -204,7 +202,7 @@ class TestLangStructAPI:
         extractor = LangStruct(example=person_example_data)
 
         assert extractor.schema is not None
-        assert extractor.optimize is False  # Default behavior
+        assert extractor.optimizer is None
         assert extractor.use_sources is True
 
     def test_constructor_no_input(self, mock_extraction_pipeline):
@@ -308,12 +306,12 @@ class TestLangStructAPI:
 
     def test_repr(self, person_schema, mock_extraction_pipeline):
         """Test __repr__ method."""
-        extractor = LangStruct(schema=person_schema, optimize=True)
+        extractor = LangStruct(schema=person_schema)
         repr_str = repr(extractor)
 
         assert "LangStruct" in repr_str
         assert "PersonSchema" in repr_str
-        assert "optimize=True" in repr_str
+        assert "optimizer_initialized=False" in repr_str
 
     def test_save_load_basic_functionality(
         self, person_schema, mock_extraction_pipeline
@@ -342,23 +340,14 @@ class TestLangStructAPI:
             assert loaded is not None
             assert issubclass(loaded.schema, person_schema)
 
-    def test_optimization_setup(self, person_schema, mock_extraction_pipeline):
-        """Test optimizer initialization."""
-        # Test with MIPROv2
-        extractor1 = LangStruct(
-            schema=person_schema, optimize=True, optimizer="miprov2"
-        )
-        assert extractor1.optimizer is not None
+    def test_optimize_raises_for_invalid_optimizer(
+        self, person_schema, mock_extraction_pipeline
+    ):
+        """Ensure invalid optimizer names raise when optimization runs."""
+        extractor = LangStruct(schema=person_schema, optimizer="invalid")
 
-        # Test with Bootstrap
-        extractor2 = LangStruct(
-            schema=person_schema, optimize=True, optimizer="bootstrap"
-        )
-        assert extractor2.optimizer is not None
-
-        # Test with invalid optimizer
         with pytest.raises(ValueError, match="Unknown optimizer"):
-            LangStruct(schema=person_schema, optimize=True, optimizer="invalid")
+            extractor.optimize(["text"])
 
     def test_optimization_default_disabled(
         self, person_schema, mock_extraction_pipeline
@@ -367,7 +356,7 @@ class TestLangStructAPI:
         extractor = LangStruct(schema=person_schema)
 
         # Optimization should be disabled by default now
-        assert extractor.optimize is False
+        assert extractor.optimizer is None
 
     def test_evaluate_placeholder(self, person_schema, mock_extraction_pipeline):
         """Test evaluate method (currently placeholder)."""
@@ -523,7 +512,7 @@ class TestLangStructIntegration:
         extractor = LangStruct(example=example)
 
         # Verify default settings
-        assert extractor.optimize is False  # Default behavior
+        assert extractor.optimizer is None
         assert extractor.use_sources is True
 
         # Should work for extraction

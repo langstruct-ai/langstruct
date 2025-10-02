@@ -369,7 +369,8 @@ class TestAdvancedFeatures:
 
     def test_metadata_with_optimization_flag(self):
         """Test that optimization flag is correctly saved in metadata."""
-        extractor = LangStruct(example={"name": "Alice", "age": 30}, optimize=True)
+        extractor = LangStruct(example={"name": "Alice", "age": 30})
+        extractor.optimizer = object()  # simulate optimization having run
 
         with tempfile.TemporaryDirectory() as temp_dir:
             save_path = Path(temp_dir) / "test_extractor"

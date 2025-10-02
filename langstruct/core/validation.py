@@ -452,7 +452,9 @@ class ExtractionValidator:
         if IssueType.LOW_CONFIDENCE in issue_types:
             suggestions.append("🎯 Try a more powerful model (e.g. gpt-5-mini)")
             suggestions.append("📝 Add more detailed field descriptions")
-            suggestions.append("🔄 Enable auto-optimization with optimize=True")
+            suggestions.append(
+                "🔄 Run extractor.optimize(...) with representative data"
+            )
 
         if IssueType.MISSING_FIELDS in issue_types:
             suggestions.append("❓ Make optional fields Optional[type] in schema")

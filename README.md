@@ -205,8 +205,7 @@ Once you've got the basics working, there's more:
 ```python
 extractor.optimize(
     texts=your_examples,
-    expected_results=expected_outputs,
-    num_trials=50
+    expected_results=expected_outputs
 )
 ```
 

@@ -149,7 +149,7 @@ def setup_test_environment():
         import dspy
 
         if GOOGLE_API_KEY:
-            dspy.configure(lm=dspy.LM("gemini/gemini-2.5-flash"))
+            dspy.configure(lm=dspy.LM("gemini/gemini-2.5-flash-lite"))
             print(f"\n✅ Running tests with Gemini 2.5 Flash")
         elif OPENAI_API_KEY:
             dspy.configure(lm=dspy.LM("openai/gpt-4o-mini"))

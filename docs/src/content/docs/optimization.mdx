@@ -9,28 +9,28 @@ Make your extraction more accurate with automatic optimization. LangStruct learn
 
 ## The Easy Way
 
-**Enable optimization (configure optimizer) and then optimize with your data:**
+**Create an extractor (optionally choose the optimizer) and call `optimize()` when you're ready:**
 
 ```python
 from langstruct import LangStruct
 
-# Create extractor with optimization enabled
 extractor = LangStruct(
   example={
     "name": "Dr. Sarah Johnson",
     "age": 34,
     "occupation": "data scientist"
   },
-  optimize=True  # sets up optimizer; run .optimize(...) to train
+  optimizer="miprov2",  # default optimizer
 )
+
+# Later, once you have training data:
+# extractor.optimize(texts=training_texts, expected_results=good_results)
 ```
 
-**Default behavior (faster startup, good baseline accuracy):**
+**Quick experiments (skip optimization entirely):**
 
 ```python
-# No optimization - good for quick experiments
 extractor = LangStruct(example={"name": "John", "age": 30})
-# optimize=False by default - enables faster startup
 ```
 
 ## When You Have Training Data
@@ -86,7 +86,6 @@ Most users don't need this, but if you want more control:
 extractor.optimize(
     texts=training_texts,
     expected_results=good_results,
-    num_trials=50,        # More trials = better results (takes longer)
     validation_split=0.3  # Use 30% for testing improvements
 )
 ```
@@ -110,19 +109,19 @@ extractor.optimize(
 
 ## Common Questions
 
-**Q: Do I always need training data?**  
+**Q: Do I always need training data?**
 A: No! Optimization can work without training data, but providing examples improves results significantly.
 
-**Q: How long does optimization take?**  
+**Q: How long does optimization take?**
 A: Usually 1-5 minutes for typical datasets (10-100 examples).
 
-**Q: Can I optimize an already optimized extractor?**  
+**Q: Can I optimize an already optimized extractor?**
 A: Yes! You can keep optimizing with new data as you get it.
 
-**Q: Will this make my extractions slower?**  
+**Q: Will this make my extractions slower?**
 A: No - optimization happens once during training. Production extraction speed is the same.
 
-**Q: What happens when I switch models?**  
+**Q: What happens when I switch models?**
 A: Just change the model and re-optimize! Same training data, same accuracy - zero prompt rewriting needed.
 
 ## Next Steps

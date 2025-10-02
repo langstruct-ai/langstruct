@@ -155,7 +155,7 @@ extractor = LangExtract(...)
 
 # Month 6: Switch to Claude - everything breaks!
 # ❌ Prompts don't work the same way
-# ❌ Few-shot examples need rewriting  
+# ❌ Few-shot examples need rewriting
 # ❌ Back to manual tuning for weeks
 
 # Month 12: Move to local Llama - start over again!
@@ -166,7 +166,7 @@ extractor = LangExtract(...)
 ### With LangStruct
 ```python
 # Month 1: Set up once
-extractor = LangStruct(example=schema, optimize=True)
+extractor = LangStruct(example=schema)
 extractor.optimize(training_data)
 
 # Month 6: Switch to Claude
