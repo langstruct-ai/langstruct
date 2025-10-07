@@ -1,6 +1,6 @@
 [project]
 name = "langstruct"
-version = "0.1.5"
+version = "0.2.0"
 description = "LLM-powered structured information extraction using DSPy optimization"
 readme = "README.md"
 license = "MIT"
