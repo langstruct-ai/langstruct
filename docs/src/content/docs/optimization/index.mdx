@@ -86,6 +86,14 @@ result = extractor.extract("Jane Smith, 29, works as a designer")
 
 **Note:** While confidence-based optimization works well, providing `expected_results` will give you better accuracy if you have the time to create them.
 
+## Reflective Optimization with GEPA
+
+When the baseline extractor completely fails—invalid JSON, missing fields, or 0 % accuracy—switch to the GEPA optimizer. GEPA pairs your fast extraction model with a stronger reflection model that studies the failures, rewrites instructions, and re-compiles the pipeline.
+
+- Start with Gemini 2.5 Flash Lite (fast) and use Gemini 2.5 Flash for reflections.
+- Even the `auto="light"` budget can move accuracy from 0 / 3 to 3 / 3, as shown in [`examples/07b_optimization_gepa.py`](https://github.com/langstruct-ai/langstruct/blob/main/examples/07b_optimization_gepa.py).
+- Learn the full reflective workflow in the [GEPA Optimization guide](/examples/gepa/).
+
 ## How Much Better?
 
 Optimization can significantly improve accuracy on real-world tasks:
@@ -114,6 +122,8 @@ loaded = LangStruct.load("./my_extractor")
 # Use immediately - optimization is preserved
 result = loaded.extract("new text")
 ```
+
+> **Pay the optimization cost once.** GEPA (or MIPROv2) only runs when you call `optimize()`. After saving the compiled extractor, subsequent processes can load it instantly and skip the expensive optimization loop entirely.
 
 ## Advanced (If You Need It)
 

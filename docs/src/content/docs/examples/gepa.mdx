@@ -1,0 +1,117 @@
+---
+title: GEPA Optimization
+description: Reflective prompt evolution that turns bad extractions into perfect ones
+---
+
+GEPA (Genetic Pareto) is LangStruct's reflective optimizer. Instead of tweaking prompts blindly, GEPA runs the extractor, studies what went wrong, and rewrites the instructions. Even the "light" budget can rescue pipelines that start at 0 % accuracy.
+
+## Why GEPA
+
+- Uses *reflection* — a second, stronger model explains failures and proposes fixes.
+- Works when baseline extractions are broken (invalid JSON, missing fields, zero recall).
+- Produces textual feedback you can inspect while keeping the pipeline fully automated.
+- Optimize once with a stronger reflection model so your **fast, inexpensive extractor** (Gemini 2.5 Flash Lite in this example) can run the production workload going forward.
+
+## How It Works
+
+1. **Chunk → Extract → Validate** using your main model (e.g. Gemini 2.5 Flash Lite).
+2. **Score the run** with `extraction_metric_with_feedback`, which returns both numeric scores and detailed diagnostics.
+3. **Reflect**: a higher-capability LM (Gemini 2.5 Flash in our example) reviews the trace and the feedback, then suggests prompt updates for individual DSPy predictors.
+4. **Evolve** candidates on a Pareto frontier, keeping only programs that actually improve held-out evaluation examples.
+
+GEPA repeats the loop until the budget (auto/light/medium/heavy) is spent or scores stop improving. The result is a compiled DSPy module ready for production.
+
+## Spotlight: Gemini Flash Example
+
+The repo includes a complete walkthrough at `examples/07b_optimization_gepa.py`.
+
+### Setup
+
+```bash
+export GOOGLE_API_KEY="YOUR_KEY"
+uv run python examples/07b_optimization_gepa.py
+```
+
+What happens behind the scenes:
+
+- **Main extractor**: `gemini/gemini-2.5-flash-lite` (fast, inexpensive) — this model initially fails to produce valid JSON for every training example, yielding a 0 / 3 score on the held-out set.
+- **Reflection model**: `gemini/gemini-2.5-flash` (higher reasoning budget, `max_tokens=32000`) — GEPA uses it to analyze traces and propose new instructions.
+- **Budget**: `auto="light"` — only a handful of reflective iterations.
+
+Despite the disastrous starting point, GEPA's reflective loop finds fixes within four iterations. The log shows the validation metric climbing from `0.0 / 3 (0.0%)` to `3.0 / 3 (100%)`, and the optimized pipeline keeps that accuracy when you rerun `extractor.evaluate(...)` after compilation.
+
+### Core Snippet
+
+```python
+from langstruct import LangStruct
+from langstruct.optimizers import GEPAOptimizer
+import dspy
+
+extractor = LangStruct(
+    example={
+        "person_name": "Dr. Sarah Johnson",
+        "job_title": "cardiologist",
+        "years_experience": 8,
+        "specialization": "interventional cardiology",
+    },
+    model="gemini/gemini-2.5-flash-lite",
+    optimizer="gepa",
+)
+
+extractor.optimizer = GEPAOptimizer(
+    auto="light",
+    reflection_lm=dspy.LM(
+        "gemini/gemini-2.5-flash",
+        max_tokens=32000,
+        temperature=1.0,
+    ),
+    track_stats=True,
+)
+
+extractor.optimize(
+    texts=training_texts,
+    expected_results=expected_results,
+)
+```
+
+After optimization, `extractor.evaluate(test_texts, expected_test_results)` reports 100 % accuracy and F1, and the subsequent `extractor.extract(...)` calls return clean, grounded entities.
+
+> **Optimize once, reuse everywhere.** After GEPA finishes, call `extractor.save(...)` and load the compiled extractor in downstream jobs to avoid paying the reflective optimization cost again.
+
+### Sample Run Output
+
+```text
+...
+2025/10/07 13:07:35 INFO dspy.teleprompt.gepa.gepa: Iteration 7: Selected program 1 score: 0.0
+Average Metric: 1.00 / 3 (33.3%): ...
+2025/10/07 13:07:35 INFO dspy.evaluate.evaluate: Average Metric: 1.0 / 3 (33.3%)
+2025/10/07 13:07:35 INFO dspy.teleprompt.gepa.gepa: Iteration 7: Proposed new text for pipeline.extractor.extract.predict: The assistant's task is to extract structured entities ...
+...
+2025/10/07 13:07:35 INFO dspy.evaluate.evaluate: Average Metric: 3.0 / 3 (100.0%)
+2025/10/07 13:07:35 INFO dspy.teleprompt.gepa.gepa: Iteration 7: Linear pareto front program index: 2
+2025/10/07 13:07:35 INFO dspy.teleprompt.gepa.gepa: Iteration 8: All subsample scores perfect. Skipping.
+...
+```
+
+Here’s what to look for:
+
+- **Iteration 7** still evaluates to 33 % accuracy, but GEPA proposes a rewritten instruction that enforces schema discipline (reasoning/JSON/sources headers, required fields, exact offsets).
+- Immediately after, the validation log flips to `3.0 / 3 (100.0%)`, proving the new instruction fixes all held-out examples.
+- Subsequent iterations skip mutation because every validation subsample is already perfect—GEPA settles on program index `2`, the best candidate on both train and validation sets.
+
+## When to Reach for GEPA
+
+- You have ground truth labels and want the optimizer to *explain* misses.
+- Your baseline extractions fail to parse or miss critical fields.
+- You can afford a second, stronger model to act as the reflective critic.
+
+If you're already near your target accuracy or only need quick heuristics, MIPROv2 remains faster. GEPA shines when insight and quality trump raw speed.
+
+## Practical Tips
+
+- **Keep reflections verbose**: Set `max_tokens` ≥ 32 k on the reflection LM so it can quote failures and propose concrete fixes.
+- **Balance cost and quality**: Use a light, inexpensive model for extraction and a stronger model for reflection. This mirrors the Gemini Flash Lite → Flash pairing from the example.
+- **Inspect feedback**: With `track_stats=True`, GEPA stores reflection notes so you can audit what changed between iterations.
+- **Rerun evaluation**: Always call `extractor.evaluate(...)` after optimization to confirm gains on your own validation data.
+
+GEPA turns reflective prompt evolution into a turnkey upgrade path: run the example once, adapt it to your schema, and keep the stronger reflection model handy for the toughest extraction challenges.

@@ -29,11 +29,12 @@ print(result.entities)
 
 ## Why use this
 
-- **Auto-optimizes prompts** – DSPy's optimizers do the tuning for you, learns from your examples
+- **Auto-optimizes prompts** – DSPy optimizers (MIPROv2, GEPA) do the tuning for you, learns from your examples
 - **Type-safe with Pydantic** – Full validation and type hints
 - **End-to-end RAG** – Extract structured metadata from docs AND parse user queries into filters
 - **Shows sources** – Character-level mapping back to original text
 - **Works with any LLM** – OpenAI, Claude, Gemini, or local models. Switch providers without rewriting code.
+- **Multiple optimization strategies** – Choose between MIPROv2 (fast, general) or GEPA (reflective, feedback-driven)
 
 We built this because we got tired of writing extraction code over and over. The DSPy foundation means your extractor improves with feedback, and you're not locked into one LLM provider.
 
@@ -203,11 +204,24 @@ Once you've got the basics working, there's more:
 
 **Custom optimization** on your data:
 ```python
+# Using MIPROv2 (default - fast, general-purpose)
+extractor = LangStruct(schema=YourSchema, optimizer="miprov2")
+extractor.optimize(
+    texts=your_examples,
+    expected_results=expected_outputs
+)
+
+# Or use GEPA (reflective, feedback-driven evolution)
+extractor = LangStruct(schema=YourSchema, optimizer="gepa")
 extractor.optimize(
     texts=your_examples,
     expected_results=expected_outputs
 )
 ```
+
+**When to use which optimizer:**
+- **MIPROv2**: Fast general-purpose optimization, joint instruction+example tuning
+- **GEPA**: Complex reasoning tasks, learns from detailed feedback, Pareto-optimal evolution
 
 **Save and reuse** extractors:
 ```python
