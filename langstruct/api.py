@@ -22,6 +22,7 @@ from .exceptions import (
     PersistenceError,
     ValidationError,
 )
+from .optimizers.gepa import GEPAOptimizer
 from .optimizers.metrics import ExtractionMetrics
 from .optimizers.mipro import MIPROv2Optimizer
 from .parallel import ParallelProcessor, ProcessingResult
@@ -82,7 +83,7 @@ class LangStruct:
             schema: Pydantic schema defining the extraction structure (optional)
             model: Model name or DSPy LM instance (defaults to "gpt-5-mini"; pass
                 "gpt-5-mini"/"gpt-5-pro" for the latest OpenAI models)
-            optimizer: Optimizer to use when optimize() runs (default: "miprov2")
+            optimizer: Optimizer to use when optimize() runs. Options: "miprov2" (default), "gepa"
             chunking_config: Configuration for text chunking
             use_sources: Whether to include source grounding (default: True)
             example: Single example dict for auto schema generation (optional)
@@ -843,11 +844,15 @@ class LangStruct:
 
     def _initialize_optimizer(self) -> None:
         """Initialize the appropriate optimizer."""
-        if self.optimizer_name.lower() == "miprov2":
+        optimizer_name = self.optimizer_name.lower()
+        if optimizer_name == "miprov2":
             self.optimizer = MIPROv2Optimizer()
+        elif optimizer_name == "gepa":
+            self.optimizer = GEPAOptimizer()
         else:
             raise ValueError(
-                f"Unknown optimizer: {self.optimizer_name}. Only 'miprov2' is supported."
+                f"Unknown optimizer: {self.optimizer_name}. "
+                f"Supported optimizers: 'miprov2', 'gepa'"
             )
 
     def _parse_refine_config(
