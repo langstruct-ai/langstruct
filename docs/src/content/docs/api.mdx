@@ -1,0 +1,193 @@
+---
+title: API Reference
+description: Complete reference for the public LangStruct API
+---
+
+# LangStruct API
+
+The `LangStruct` class is the primary entry point for building extractors, parsing
+natural language queries, and exporting results. All examples below assume:
+
+```python
+from langstruct import LangStruct
+
+ls = LangStruct(example={
+    "company": "Apple",
+    "revenue": 125.3,
+    "quarter": "Q3 2024",
+})
+```
+
+## Initialization
+
+```python
+LangStruct(
+    schema: Optional[Type[Schema]] = None,
+    model: Optional[Union[str, dspy.LM]] = None,
+    optimizer: str = "miprov2",
+    chunking_config: Optional[ChunkingConfig] = None,
+    use_sources: bool = True,
+    example: Optional[Dict[str, Any]] = None,
+    examples: Optional[List[Dict[str, Any]]] = None,
+    schema_name: str = "GeneratedSchema",
+    descriptions: Optional[Dict[str, str]] = None,
+    refine: Union[bool, Refine, Dict[str, Any]] = False,
+    **llm_kwargs,
+)
+```
+
+- Provide a Pydantic `schema` **or** pass one/many example dicts for automatic schema generation.
+- Pass `model="gpt-4o-mini"`, `model=dspy.LM(...)`, or omit to auto-detect from configured API keys.
+- Set `refine=True` or pass a `Refine` config to boost accuracy with additional model calls.
+
+## Extraction
+
+### `extract`
+
+```python
+result = ls.extract(
+    text_or_texts,
+    confidence_threshold: float = 0.0,
+    validate: bool = True,
+    debug: bool = False,
+    return_sources: Optional[bool] = None,
+    max_workers: Optional[int] = None,
+    show_progress: bool = False,
+    rate_limit: Optional[int] = None,
+    retry_failed: bool = True,
+    refine: Union[bool, Refine, Dict[str, Any], None] = None,
+    **kwargs,
+)
+```
+
+- Accepts either a single string or a list of strings. Lists automatically parallelize.
+- `validate=True` runs LangStruct's validator; combine with `debug=True` to surface suggestions.
+- Override `return_sources` to force-enable/disable character-level grounding per call.
+- Use `refine=True` or a custom dict (e.g., `{ "strategy": "bon", "n_candidates": 5 }`).
+- Returns an `ExtractionResult` for single inputs or `List[ExtractionResult]` for batches.
+
+### `extract_batch`
+
+Explicit parallel API when you want access to failure details:
+
+```python
+results = ls.extract_batch(
+    texts,
+    max_workers: int = 10,
+    show_progress: bool = True,
+    rate_limit: Optional[int] = None,
+    return_failures: bool = False,
+)
+```
+
+- Set `return_failures=True` to receive a `ProcessingResult` with `successful`/`failed` collections.
+- Honors the same validation/refinement arguments as `extract`.
+
+## Query Parsing
+
+### `query`
+
+```python
+parsed = ls.query(
+    query_or_queries,
+    explain: bool = True,
+    max_workers: Optional[int] = None,
+    show_progress: bool = False,
+    rate_limit: Optional[int] = None,
+    retry_failed: bool = True,
+)
+```
+
+- Converts natural language RAG queries into `ParsedQuery` objects containing
+  `semantic_terms`, `structured_filters`, `confidence`, and optional explanations.
+- Accepts strings or lists; lists parallelize just like `extract`.
+
+### `query_batch`
+
+Same spirit as `extract_batch`, returning either parsed queries or a `ProcessingResult`
+when `return_failures=True`.
+
+```python
+results = ls.query_batch(
+    queries,
+    max_workers: int = 10,
+    show_progress: bool = True,
+    rate_limit: Optional[int] = None,
+    return_failures: bool = False,
+)
+```
+
+## Optimization & Evaluation
+
+### `optimize`
+
+```python
+ls.optimize(
+    texts: List[str],
+    expected_results: Optional[List[Dict]] = None,
+    validation_split: float = 0.2,
+)
+```
+
+- Initializes a DSPy optimizer (MIPROv2 by default, or GEPA if `optimizer="gepa"`).
+- Provide `expected_results` for supervised optimization; otherwise LangStruct uses metric-free improvements.
+- Returns the same `LangStruct` instance for chaining.
+
+### `evaluate`
+
+```python
+scores = ls.evaluate(
+    texts: List[str],
+    expected_results: List[Dict],
+    metrics: Optional[List[str]] = None,
+)
+```
+
+- Computes accuracy/F1 by default, with optional `precision` and `recall`.
+- Uses the current extractor pipeline, so run `optimize` beforehand if you want tuned prompts.
+
+## Exporting & Visualization
+
+### `export_batch`
+
+```python
+ls.export_batch(
+    results: List[ExtractionResult],
+    file_path: str,
+    format: str = "csv",
+    include_metadata: bool = False,
+    include_sources: bool = False,
+    **kwargs,
+)
+```
+
+- Supports `csv`, `json`, `excel`, and `parquet` outputs.
+- Set `include_sources=True` to embed grounding spans beside values.
+
+### `save_annotated_documents` / `load_annotated_documents`
+
+- Persist extractions to JSONL with `save_annotated_documents(results, "extractions.jsonl")`.
+- Rehydrate them via `load_annotated_documents(path)` to continue processing or visualize later.
+
+### `visualize`
+
+```python
+html = ls.visualize(results_or_jsonl, file_path: Optional[str] = None, **kwargs)
+```
+
+- Generates the interactive HTML viewer used across LangStruct demos.
+- Pass a file path to save the visualization, or omit to receive the HTML string.
+
+## Saving & Loading Extractors
+
+- `ls.save("./my_extractor")` writes schema, pipeline state, optimizer config, and refinement options to disk.
+- `LangStruct.load(path)` reconstructs the extractor (API keys must still be set in the environment).
+
+## Schema Introspection
+
+- Access `ls.schema_info` to retrieve field descriptions, JSON Schema, and an example payload structure. Useful for generating docs or debugging auto-generated schemas.
+
+## Related Utilities
+
+- `ls.save_annotated_documents`, `ls.load_annotated_documents`, and `ls.visualize` share formats with LangExtract—handy for migrating annotated corpora.
+- `ProcessingResult` objects (returned when `return_failures=True`) expose `successful`, `failed`, `success_rate`, and helper methods like `raise_if_failed()`.
