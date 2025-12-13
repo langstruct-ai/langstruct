@@ -49,6 +49,30 @@ class TestLangStructAPI:
         assert result.entities == {}
         assert result.sources == {}
 
+    def test_extract_passes_reasoning_and_run_validation_to_pipeline(self, person_schema):
+        """Ensure extract() threads reasoning/run_validation to pipeline when supported."""
+        from langstruct.core.schemas import ExtractionResult
+
+        extractor = LangStruct(schema=person_schema)
+
+        class PipelineWithParams:
+            def __call__(self, text: str, run_validation: bool = True, reasoning="predict"):
+                # Return a valid result and encode params for assertion
+                return ExtractionResult(
+                    entities={"name": "X"},
+                    sources={},
+                    confidence=0.9,
+                    metadata={
+                        "seen_run_validation": run_validation,
+                        "seen_reasoning": str(reasoning),
+                    },
+                )
+
+        extractor.pipeline = PipelineWithParams()
+        result = extractor.extract("hello", validate=False, run_validation=False, reasoning="cot")
+        assert result.metadata["seen_run_validation"] is False
+        assert result.metadata["seen_reasoning"] == "cot"
+
     def test_extract_with_validation(
         self, person_schema, mock_extraction_pipeline, sample_person_text
     ):

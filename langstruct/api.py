@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Type, Union, overload
 import dspy
 
 from .core import modules as core_modules
+from .core.modules import ReasoningMode
 from .core.chunking import ChunkingConfig
 from .core.export_utils import ExportUtilities
 from .core.modules import QueryParser
@@ -212,6 +213,8 @@ class LangStruct:
         text: str,
         confidence_threshold: float = 0.0,
         validate: bool = True,
+        run_validation: bool = True,
+        reasoning: Union[ReasoningMode, str] = ReasoningMode.PREDICT,
         debug: bool = False,
         return_sources: Optional[bool] = None,
         refine: Union[bool, Refine, Dict[str, Any], None] = None,
@@ -224,6 +227,8 @@ class LangStruct:
         text: List[str],
         confidence_threshold: float = 0.0,
         validate: bool = True,
+        run_validation: bool = True,
+        reasoning: Union[ReasoningMode, str] = ReasoningMode.PREDICT,
         debug: bool = False,
         return_sources: Optional[bool] = None,
         max_workers: Optional[int] = None,
@@ -239,6 +244,8 @@ class LangStruct:
         text: Union[str, List[str]],
         confidence_threshold: float = 0.0,
         validate: bool = True,
+        run_validation: bool = True,
+        reasoning: Union[ReasoningMode, str] = ReasoningMode.PREDICT,
         debug: bool = False,
         return_sources: Optional[bool] = None,
         max_workers: Optional[int] = None,
@@ -256,7 +263,10 @@ class LangStruct:
         Args:
             text: Input text or list of texts to extract from
             confidence_threshold: Minimum confidence score to accept results
-            validate: Whether to run quality validation and show suggestions
+            validate: Whether to run post-extraction quality validation and show suggestions
+            run_validation: Whether to run the LLM validation step inside the extraction
+                pipeline (i.e., `EntityExtractor.validate`). Set False to skip that call.
+            reasoning: Reasoning strategy used by the extraction pipeline ("predict" or "cot").
             debug: Whether to show detailed validation warnings and suggestions (default: False)
             return_sources: Override source grounding for this call
             max_workers: Maximum parallel workers for batch processing (list input only)
@@ -303,6 +313,8 @@ class LangStruct:
                 texts=text,
                 confidence_threshold=confidence_threshold,
                 validate=validate,
+                run_validation=run_validation,
+                reasoning=reasoning,
                 debug=debug,
                 return_sources=return_sources,
                 max_workers=max_workers,
@@ -314,7 +326,14 @@ class LangStruct:
 
         # Handle single text input
         return self._extract_single(
-            text, confidence_threshold, validate, debug, return_sources, refine
+            text,
+            confidence_threshold,
+            validate,
+            run_validation,
+            reasoning,
+            debug,
+            return_sources,
+            refine,
         )
 
     def _extract_parallel(
@@ -322,6 +341,8 @@ class LangStruct:
         texts: List[str],
         confidence_threshold: float = 0.0,
         validate: bool = True,
+        run_validation: bool = True,
+        reasoning: Union[ReasoningMode, str] = ReasoningMode.PREDICT,
         debug: bool = False,
         return_sources: Optional[bool] = None,
         max_workers: Optional[int] = None,
@@ -359,6 +380,8 @@ class LangStruct:
                 text=text,
                 confidence_threshold=confidence_threshold,
                 validate=validate,
+                run_validation=run_validation,
+                reasoning=reasoning,
                 debug=debug,
                 return_sources=return_sources,
                 refine=refine,
@@ -389,12 +412,15 @@ class LangStruct:
         texts: List[str],
         confidence_threshold: float = 0.0,
         validate: bool = True,
+        run_validation: bool = True,
+        reasoning: Union[ReasoningMode, str] = ReasoningMode.PREDICT,
         debug: bool = False,
         return_sources: Optional[bool] = None,
         max_workers: int = 10,
         show_progress: bool = True,
         rate_limit: Optional[int] = None,
         return_failures: bool = False,
+        refine: Union[bool, Refine, Dict[str, Any], None] = None,
     ) -> Union[List[ExtractionResult], ProcessingResult]:
         """Batch extract with explicit parallel processing control.
 
@@ -405,12 +431,16 @@ class LangStruct:
             texts: List of texts to extract from
             confidence_threshold: Minimum confidence score to accept
             validate: Whether to run validation
+            run_validation: Whether to run the LLM validation step inside the extraction
+                pipeline (i.e., `EntityExtractor.validate`). Set False to skip that call.
+            reasoning: Reasoning strategy used by the extraction pipeline ("predict" or "cot").
             debug: Whether to show detailed validation warnings and suggestions (default: False)
             return_sources: Override source grounding
             max_workers: Number of parallel workers (default: 10)
             show_progress: Show progress bar (default: True)
             rate_limit: API calls per minute limit
             return_failures: If True, returns ProcessingResult with successes/failures
+            refine: Override refinement config for this call
 
         Returns:
             List[ExtractionResult] if return_failures=False (raises on any failure)
@@ -437,6 +467,8 @@ class LangStruct:
                 text=text,
                 confidence_threshold=confidence_threshold,
                 validate=validate,
+                run_validation=run_validation,
+                reasoning=reasoning,
                 debug=debug,
                 return_sources=return_sources,
                 refine=refine,
@@ -462,6 +494,8 @@ class LangStruct:
         text: str,
         confidence_threshold: float = 0.0,
         validate: bool = True,
+        run_validation: bool = True,
+        reasoning: Union[ReasoningMode, str] = ReasoningMode.PREDICT,
         debug: bool = False,
         return_sources: Optional[bool] = None,
         refine: Union[bool, Refine, Dict[str, Any], None] = None,
@@ -484,7 +518,14 @@ class LangStruct:
                 overridden = True
 
             # Run extraction pipeline (call bound __call__ so tests can patch it)
-            result = self.pipeline.__call__(text)
+            # NOTE: some tests monkeypatch `ExtractionPipeline` with mocks that do
+            # not accept `run_validation`/`reasoning`, so fall back gracefully.
+            try:
+                result = self.pipeline.__call__(
+                    text, run_validation=run_validation, reasoning=reasoning
+                )
+            except TypeError:
+                result = self.pipeline.__call__(text)
         finally:
             # Restore previous setting if we overrode it
             if (
