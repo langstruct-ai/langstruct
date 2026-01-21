@@ -238,7 +238,8 @@ def with_parallel_support(func: Callable) -> Callable:
     """Decorator to add parallel processing support to a method.
 
     This decorator allows a method to handle both single items and lists,
-    automatically using parallel processing for lists.
+    automatically using parallel processing for lists. Failed items are
+    retried automatically but won't cause the entire batch to fail.
     """
 
     @wraps(func)
@@ -247,7 +248,7 @@ def with_parallel_support(func: Callable) -> Callable:
         max_workers = kwargs.pop("max_workers", None)
         show_progress = kwargs.pop("show_progress", False)
         rate_limit = kwargs.pop("rate_limit", None)
-        retry_failed = kwargs.pop("retry_failed", True)
+        raise_on_failure = kwargs.pop("raise_on_failure", False)
 
         # Handle single vs batch
         if isinstance(items, list):
@@ -268,15 +269,16 @@ def with_parallel_support(func: Callable) -> Callable:
                 desc=f"{func.__name__}",
             )
 
-            # Handle failures
-            if retry_failed:
-                result.raise_if_failed()
-            elif result.failed:
+            # Handle failures - only raise if explicitly requested
+            if result.failed:
                 warnings.warn(
                     f"{len(result.failed)} items failed during {func.__name__}. "
                     f"Success rate: {result.success_rate:.1f}%",
                     UserWarning,
                 )
+                
+                if raise_on_failure:
+                    result.raise_if_failed()
 
             return result.get_results()
         else:
