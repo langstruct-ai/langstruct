@@ -221,7 +221,7 @@ class MockExtractionPipeline:
         self.extractor = MagicMock()
         self.extractor.use_sources = True
 
-    def __call__(self, text: str) -> ExtractionResult:
+    def __call__(self, text: str, **kwargs) -> ExtractionResult:
         """Mock extraction that returns predictable results."""
         # Generate mock results based on schema
         entities = {}

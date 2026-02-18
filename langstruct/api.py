@@ -1,6 +1,7 @@
 """Main LangStruct API for LLM-powered structured information extraction."""
 
 import inspect
+import logging
 import warnings
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, Union, overload
@@ -8,6 +9,7 @@ from typing import Any, Dict, List, Optional, Type, Union, overload
 import dspy
 
 from .core import modules as core_modules
+from .core.modules import ReasoningMode
 from .core.chunking import ChunkingConfig
 from .core.export_utils import ExportUtilities
 from .core.modules import QueryParser
@@ -28,6 +30,8 @@ from .optimizers.mipro import MIPROv2Optimizer
 from .parallel import ParallelProcessor, ProcessingResult
 from .providers.llm_factory import LLMFactory
 from .visualization.html_viz import save_visualization, visualize
+
+logger = logging.getLogger(__name__)
 
 
 class LangStruct:
@@ -212,6 +216,8 @@ class LangStruct:
         text: str,
         confidence_threshold: float = 0.0,
         validate: bool = True,
+        run_validation: bool = True,
+        reasoning: Union[ReasoningMode, str] = ReasoningMode.PREDICT,
         debug: bool = False,
         return_sources: Optional[bool] = None,
         refine: Union[bool, Refine, Dict[str, Any], None] = None,
@@ -224,6 +230,8 @@ class LangStruct:
         text: List[str],
         confidence_threshold: float = 0.0,
         validate: bool = True,
+        run_validation: bool = True,
+        reasoning: Union[ReasoningMode, str] = ReasoningMode.PREDICT,
         debug: bool = False,
         return_sources: Optional[bool] = None,
         max_workers: Optional[int] = None,
@@ -239,6 +247,8 @@ class LangStruct:
         text: Union[str, List[str]],
         confidence_threshold: float = 0.0,
         validate: bool = True,
+        run_validation: bool = True,
+        reasoning: Union[ReasoningMode, str] = ReasoningMode.PREDICT,
         debug: bool = False,
         return_sources: Optional[bool] = None,
         max_workers: Optional[int] = None,
@@ -256,7 +266,10 @@ class LangStruct:
         Args:
             text: Input text or list of texts to extract from
             confidence_threshold: Minimum confidence score to accept results
-            validate: Whether to run quality validation and show suggestions
+            validate: Whether to run post-extraction quality validation and show suggestions
+            run_validation: Whether to run the LLM validation step inside the extraction
+                pipeline (i.e., `EntityExtractor.validate`). Set False to skip that call.
+            reasoning: Reasoning strategy used by the extraction pipeline ("predict" or "cot").
             debug: Whether to show detailed validation warnings and suggestions (default: False)
             return_sources: Override source grounding for this call
             max_workers: Maximum parallel workers for batch processing (list input only)
@@ -303,6 +316,8 @@ class LangStruct:
                 texts=text,
                 confidence_threshold=confidence_threshold,
                 validate=validate,
+                run_validation=run_validation,
+                reasoning=reasoning,
                 debug=debug,
                 return_sources=return_sources,
                 max_workers=max_workers,
@@ -314,7 +329,14 @@ class LangStruct:
 
         # Handle single text input
         return self._extract_single(
-            text, confidence_threshold, validate, debug, return_sources, refine
+            text,
+            confidence_threshold,
+            validate,
+            run_validation,
+            reasoning,
+            debug,
+            return_sources,
+            refine,
         )
 
     def _extract_parallel(
@@ -322,6 +344,8 @@ class LangStruct:
         texts: List[str],
         confidence_threshold: float = 0.0,
         validate: bool = True,
+        run_validation: bool = True,
+        reasoning: Union[ReasoningMode, str] = ReasoningMode.PREDICT,
         debug: bool = False,
         return_sources: Optional[bool] = None,
         max_workers: Optional[int] = None,
@@ -359,6 +383,8 @@ class LangStruct:
                 text=text,
                 confidence_threshold=confidence_threshold,
                 validate=validate,
+                run_validation=run_validation,
+                reasoning=reasoning,
                 debug=debug,
                 return_sources=return_sources,
                 refine=refine,
@@ -389,12 +415,15 @@ class LangStruct:
         texts: List[str],
         confidence_threshold: float = 0.0,
         validate: bool = True,
+        run_validation: bool = True,
+        reasoning: Union[ReasoningMode, str] = ReasoningMode.PREDICT,
         debug: bool = False,
         return_sources: Optional[bool] = None,
         max_workers: int = 10,
         show_progress: bool = True,
         rate_limit: Optional[int] = None,
         return_failures: bool = False,
+        refine: Union[bool, Refine, Dict[str, Any], None] = None,
     ) -> Union[List[ExtractionResult], ProcessingResult]:
         """Batch extract with explicit parallel processing control.
 
@@ -405,12 +434,16 @@ class LangStruct:
             texts: List of texts to extract from
             confidence_threshold: Minimum confidence score to accept
             validate: Whether to run validation
+            run_validation: Whether to run the LLM validation step inside the extraction
+                pipeline (i.e., `EntityExtractor.validate`). Set False to skip that call.
+            reasoning: Reasoning strategy used by the extraction pipeline ("predict" or "cot").
             debug: Whether to show detailed validation warnings and suggestions (default: False)
             return_sources: Override source grounding
             max_workers: Number of parallel workers (default: 10)
             show_progress: Show progress bar (default: True)
             rate_limit: API calls per minute limit
             return_failures: If True, returns ProcessingResult with successes/failures
+            refine: Override refinement config for this call
 
         Returns:
             List[ExtractionResult] if return_failures=False (raises on any failure)
@@ -437,6 +470,8 @@ class LangStruct:
                 text=text,
                 confidence_threshold=confidence_threshold,
                 validate=validate,
+                run_validation=run_validation,
+                reasoning=reasoning,
                 debug=debug,
                 return_sources=return_sources,
                 refine=refine,
@@ -462,6 +497,8 @@ class LangStruct:
         text: str,
         confidence_threshold: float = 0.0,
         validate: bool = True,
+        run_validation: bool = True,
+        reasoning: Union[ReasoningMode, str] = ReasoningMode.PREDICT,
         debug: bool = False,
         return_sources: Optional[bool] = None,
         refine: Union[bool, Refine, Dict[str, Any], None] = None,
@@ -470,51 +507,100 @@ class LangStruct:
         if not text.strip():
             return ExtractionResult(entities={}, sources={})
 
-        # Optionally override source grounding for this call only
-        overridden = False
-        previous_use_sources = None
+        # Log the effective configuration once per run (not per chunk).
+        # Avoid logging raw text (can be huge / sensitive).
+        pipeline_chunking = None
         try:
-            if (
-                return_sources is not None
-                and hasattr(self.pipeline, "extractor")
-                and hasattr(self.pipeline.extractor, "use_sources")
-            ):
-                previous_use_sources = getattr(self.pipeline.extractor, "use_sources")
-                setattr(self.pipeline.extractor, "use_sources", bool(return_sources))
-                overridden = True
+            # ExtractionPipeline -> TextChunkerModule -> TextChunker -> ChunkingConfig
+            pipeline_chunking = getattr(
+                getattr(getattr(self.pipeline, "chunker", None), "chunker", None),
+                "config",
+                None,
+            )
+        except Exception:
+            pipeline_chunking = None
 
-            # Run extraction pipeline (call bound __call__ so tests can patch it)
-            result = self.pipeline.__call__(text)
-        finally:
-            # Restore previous setting if we overrode it
-            if (
-                overridden
-                and previous_use_sources is not None
-                and hasattr(self.pipeline, "extractor")
-                and hasattr(self.pipeline.extractor, "use_sources")
-            ):
-                setattr(self.pipeline.extractor, "use_sources", previous_use_sources)
+        logger.info(
+            "LangStruct.extract config=%s",
+            {
+                "schema": getattr(self.schema, "__name__", str(self.schema)),
+                "text_length": len(text),
+                "confidence_threshold": confidence_threshold,
+                # Post-extraction validator (ExtractionResult.validate_quality)
+                "validate": bool(validate),
+                "debug": bool(debug),
+                # LLM validation step inside EntityExtractor
+                "run_validation": bool(run_validation),
+                "reasoning": str(reasoning),
+                # Sources/chunking/refine knobs
+                "return_sources_override": return_sources,
+                "use_sources_default": getattr(self, "use_sources", None),
+                "chunking_config_init": (
+                    self.chunking_config.model_dump()
+                    if getattr(self, "chunking_config", None) is not None
+                    else None
+                ),
+                "chunking_config_effective": (
+                    pipeline_chunking.model_dump()
+                    if pipeline_chunking is not None
+                    and hasattr(pipeline_chunking, "model_dump")
+                    else None
+                ),
+                "refine_requested": refine,
+                "refine_default": (
+                    self.refine_config.model_dump()
+                    if getattr(self, "refine_config", None) is not None
+                    and hasattr(self.refine_config, "model_dump")
+                    else (
+                        self.refine_config
+                        if getattr(self, "refine_config", None) is not None
+                        else None
+                    )
+                ),
+            },
+        )
 
-        # Apply refinement if requested
+        # Determine if refinement will run (so we can skip the pipeline call)
         refine_trace = None
+        effective_refine = None
         if refine is not None or self.refine_config:
-            # Parse refine configuration for this call
             effective_refine = (
                 self._parse_refine_config(refine)
                 if refine is not None
                 else self.refine_config
             )
 
-            if effective_refine:
+        if effective_refine:
+            # Refinement will do its own extraction from scratch, so skip
+            # the pipeline call entirely to avoid a wasted LLM call.
+            # Apply source grounding override for the refinement engine's
+            # extractor (same object as self.pipeline.extractor).
+            overridden = False
+            previous_use_sources = None
+            try:
+                if (
+                    return_sources is not None
+                    and hasattr(self.pipeline, "extractor")
+                    and hasattr(self.pipeline.extractor, "use_sources")
+                ):
+                    previous_use_sources = getattr(
+                        self.pipeline.extractor, "use_sources"
+                    )
+                    setattr(
+                        self.pipeline.extractor, "use_sources", bool(return_sources)
+                    )
+                    overridden = True
+
                 # Lazily initialize refinement engine if not already created
                 if self.refinement_engine is None:
                     self.refinement_engine = RefinementEngine(
                         self.schema, self.pipeline.extractor
                     )
 
-                # Run refinement process
-                refined_result, trace = self.refinement_engine(text, effective_refine)
-                result = refined_result
+                # Run refinement process (includes its own initial extraction)
+                result, trace = self.refinement_engine(
+                    text, effective_refine, run_validation=run_validation
+                )
                 refine_trace = trace
 
                 # Add refinement metadata
@@ -527,6 +613,54 @@ class LangStruct:
                         "refinement_budget_used": trace.budget_used,
                     }
                 )
+            finally:
+                if (
+                    overridden
+                    and previous_use_sources is not None
+                    and hasattr(self.pipeline, "extractor")
+                    and hasattr(self.pipeline.extractor, "use_sources")
+                ):
+                    setattr(
+                        self.pipeline.extractor, "use_sources", previous_use_sources
+                    )
+        else:
+            # No refinement — run the pipeline normally
+            overridden = False
+            previous_use_sources = None
+            try:
+                if (
+                    return_sources is not None
+                    and hasattr(self.pipeline, "extractor")
+                    and hasattr(self.pipeline.extractor, "use_sources")
+                ):
+                    previous_use_sources = getattr(
+                        self.pipeline.extractor, "use_sources"
+                    )
+                    setattr(
+                        self.pipeline.extractor, "use_sources", bool(return_sources)
+                    )
+                    overridden = True
+
+                # Run extraction pipeline (call bound __call__ so tests can patch it)
+                # NOTE: some tests monkeypatch `ExtractionPipeline` with mocks that do
+                # not accept `run_validation`/`reasoning`, so fall back gracefully.
+                try:
+                    result = self.pipeline.__call__(
+                        text, run_validation=run_validation, reasoning=reasoning
+                    )
+                except TypeError:
+                    result = self.pipeline.__call__(text)
+            finally:
+                # Restore previous setting if we overrode it
+                if (
+                    overridden
+                    and previous_use_sources is not None
+                    and hasattr(self.pipeline, "extractor")
+                    and hasattr(self.pipeline.extractor, "use_sources")
+                ):
+                    setattr(
+                        self.pipeline.extractor, "use_sources", previous_use_sources
+                    )
 
         # Filter by confidence threshold
         if result.confidence < confidence_threshold:

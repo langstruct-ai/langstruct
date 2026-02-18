@@ -1,9 +1,51 @@
 """DSPy signatures for structured extraction tasks."""
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Literal
 
 import dspy
+from pydantic import BaseModel, Field, field_validator
 from typing_extensions import Annotated
+
+
+class JudgeScoreItem(BaseModel):
+    """Score for a single extraction candidate."""
+
+    score: float = Field(ge=0.0, le=1.0, description="Score between 0 and 1")
+    reasoning: str = Field(description="Explanation of the score")
+    feedback: str = Field(description="Specific actionable improvements")
+    findings: Literal["NO_ISSUES", "ISSUES"] = Field(
+        description=(
+            "NO_ISSUES if the extraction is correct and complete (including correctly empty "
+            "extractions when the data doesn't match schema requirements), "
+            "ISSUES if problems were found that need fixing"
+        )
+    )
+
+    @field_validator("findings", mode="before")
+    @classmethod
+    def normalize_findings(cls, v: Any) -> str:
+        """Normalize LLM output variations to exact enum values."""
+        if isinstance(v, str):
+            normalized = v.strip().upper().replace(" ", "_").replace("-", "_")
+            if normalized in (
+                "NO_ISSUES",
+                "NOISSUES",
+                "NO_ISSUE",
+                "NONE",
+                "FINISHED_GENERATION",
+                "FINISHED",
+                "COMPLETE",
+                "COMPLETED",
+            ):
+                return "NO_ISSUES"
+            return "ISSUES"
+        return "ISSUES"
+
+
+class JudgeScores(BaseModel):
+    """Judgment results for multiple candidates."""
+
+    scores: List[JudgeScoreItem] = Field(description="Score for each candidate")
 
 
 class ExtractEntities(dspy.Signature):
@@ -55,6 +97,7 @@ class ValidateExtraction(dspy.Signature):
 
     Verify that extracted entities are accurate, complete, and properly
     grounded in the source text.
+
     """
 
     text: Annotated[str, dspy.InputField(desc="Original source text")]
@@ -136,9 +179,13 @@ class RefineExtraction(dspy.Signature):
 class JudgeExtractions(dspy.Signature):
     """Judge and score multiple extraction candidates.
 
-    Evaluate extraction candidates against a rubric and provide scores
-    and reasoning. Focus on faithfulness to source text, completeness,
-    and accuracy of extracted information.
+    Evaluate extraction candidates against a rubric and provide scores,
+    reasoning, and actionable feedback. Focus on faithfulness to source text,
+    completeness, and accuracy of extracted information.
+
+    For each candidate, set findings to NO_ISSUES if the extraction is correct
+    and complete with no problems found, or ISSUES if there are problems that
+    need fixing.
     """
 
     text: Annotated[str, dspy.InputField(desc="Original source text")]
@@ -149,8 +196,8 @@ class JudgeExtractions(dspy.Signature):
     schema_spec: Annotated[str, dspy.InputField(desc="Expected schema specification")]
     rubric: Annotated[str, dspy.InputField(desc="Scoring rubric and criteria")]
     scores: Annotated[
-        str,
+        JudgeScores,
         dspy.OutputField(
-            desc="JSON array with score (0-1) and reasoning for each candidate"
+            desc="Structured judgment with scores, feedback, and findings for each candidate"
         ),
     ]

@@ -1,12 +1,16 @@
 """Core DSPy extraction modules implementing the extraction pipeline."""
 
 import json
-from typing import Any, Dict, List, Optional, Type
+import logging
+import warnings
+from enum import Enum
+from typing import Any, Dict, List, Optional, Type, Union
 
 import dspy
 from pydantic import BaseModel, ValidationError
 
 from .chunking import ChunkingConfig, TextChunk, TextChunker
+from .constants import MAX_PARSE_RETRIES
 from .grounding import SourceGrounder
 from .schema_utils import get_field_descriptions, get_json_schema
 from .schemas import ChunkResult, ExtractionResult, ParsedQuery, SourceSpan
@@ -18,51 +22,153 @@ from .signatures import (
     ValidateExtraction,
 )
 
+logger = logging.getLogger(__name__)
+
+
+class ReasoningMode(str, Enum):
+    """Reasoning strategy for DSPy predictors."""
+
+    COT = "cot"
+    PREDICT = "predict"
+
+
+def _coerce_reasoning_mode(mode: Union["ReasoningMode", str, None]) -> "ReasoningMode":
+    """Coerce a user-provided value into a ReasoningMode."""
+    if mode is None:
+        return ReasoningMode.PREDICT
+    if isinstance(mode, ReasoningMode):
+        return mode
+    try:
+        return ReasoningMode(str(mode).lower())
+    except Exception:
+        return ReasoningMode.PREDICT
+
 
 class EntityExtractor(dspy.Module):
     """Core entity extraction module using DSPy Chain of Thought."""
 
-    def __init__(self, schema: Type[BaseModel], use_sources: bool = True):
+    def __init__(
+        self,
+        schema: Type[BaseModel],
+        use_sources: bool = True,
+        reasoning: Union[ReasoningMode, str] = ReasoningMode.PREDICT,
+    ):
         super().__init__()
         self.schema = schema
         self.use_sources = use_sources
+        self.reasoning = _coerce_reasoning_mode(reasoning)
 
-        # Initialize DSPy modules
+        # Initialize DSPy modules (keep both so we can switch per-call)
         if use_sources:
-            self.extract = dspy.ChainOfThought(ExtractWithSources)
+            self._extract_predict = dspy.Predict(ExtractWithSources)
+            self._extract_cot = dspy.ChainOfThought(ExtractWithSources)
         else:
-            self.extract = dspy.ChainOfThought(ExtractEntities)
+            self._extract_predict = dspy.Predict(ExtractEntities)
+            self._extract_cot = dspy.ChainOfThought(ExtractEntities)
 
-        self.validate = dspy.ChainOfThought(ValidateExtraction)
+        self._validate_predict = dspy.Predict(ValidateExtraction)
+        self._validate_cot = dspy.ChainOfThought(ValidateExtraction)
         self.grounder = SourceGrounder()
 
-    def forward(self, text: str, chunk_offset: int = 0) -> ExtractionResult:
-        """Extract structured entities from text with validation."""
+    def forward(
+        self,
+        text: str,
+        chunk_offset: int = 0,
+        run_validation: bool = True,
+        reasoning: Union[ReasoningMode, str, None] = None,
+    ) -> ExtractionResult:
+        """Extract structured entities from text.
+
+        Args:
+            text: Input text to extract from
+            chunk_offset: Offset to add to source spans (when processing chunks)
+            run_validation: If False, skip the LLM validation step (`self.validate`)
+            reasoning: Override reasoning strategy for this call ("predict" or "cot")
+        """
+        effective_reasoning = (
+            _coerce_reasoning_mode(reasoning)
+            if reasoning is not None
+            else self.reasoning
+        )
+        logger.info(
+            "EntityExtractor.forward config=%s",
+            {
+                "reasoning": effective_reasoning.value,
+                "run_validation": bool(run_validation),
+                "use_sources": self.use_sources,
+                "schema": getattr(self.schema, "__name__", str(self.schema)),
+                "chunk_offset": chunk_offset,
+            },
+        )
+
         schema_json = json.dumps(get_json_schema(self.schema), indent=2)
 
-        # Perform extraction
-        if self.use_sources:
-            result = self.extract(text=text, schema_spec=schema_json)
-            entities_json = result.entities
-            sources_json = getattr(result, "sources", "{}")
-        else:
-            result = self.extract(text=text, schema_spec=schema_json)
-            entities_json = result.entities
-            sources_json = "{}"
-
-        # Parse extracted entities
-        try:
-            entities_dict = json.loads(entities_json)
-            sources_dict = json.loads(sources_json)
-        except json.JSONDecodeError:
-            # Fallback to empty result if JSON parsing fails
-            entities_dict = {}
-            sources_dict = {}
-
-        # Validate extraction using DSPy
-        validation = self.validate(
-            text=text, entities=entities_json, schema_spec=schema_json
+        # Perform extraction using the appropriate extractor based on reasoning mode
+        extractor = (
+            self._extract_cot
+            if effective_reasoning == ReasoningMode.COT
+            else self._extract_predict
         )
+
+        max_parse_retries = MAX_PARSE_RETRIES
+        entities_dict = {}
+        sources_dict = {}
+        effective_schema_json = schema_json
+
+        for attempt in range(max_parse_retries):
+            if self.use_sources:
+                result = extractor(text=text, schema_spec=effective_schema_json)
+                entities_json = result.entities
+                sources_json = getattr(result, "sources", "{}")
+            else:
+                result = extractor(text=text, schema_spec=effective_schema_json)
+                entities_json = result.entities
+                sources_json = "{}"
+
+            # Parse extracted entities
+            try:
+                entities_dict = json.loads(entities_json)
+                sources_dict = json.loads(sources_json)
+                break  # Success
+            except json.JSONDecodeError as e:
+                error_msg = (
+                    f"JSON parsing failed: {e}\n"
+                    f"Invalid output: {entities_json[:500]}"
+                )
+                # Append error feedback to schema spec for next attempt
+                effective_schema_json = (
+                    f"{schema_json}\n\n"
+                    f"CRITICAL: Your previous response was not valid JSON. "
+                    f"You MUST return valid JSON. Error: {error_msg}"
+                )
+                if attempt < max_parse_retries - 1:
+                    logger.warning(
+                        "Extraction parse failed, retry %d/%d: %s",
+                        attempt + 1,
+                        max_parse_retries,
+                        str(e),
+                    )
+                else:
+                    warnings.warn(
+                        f"Extraction failed to parse after {max_parse_retries} retries, "
+                        "using empty result"
+                    )
+
+        # Validate extraction using DSPy (optional)
+        if run_validation:
+            validator = (
+                self._validate_cot
+                if effective_reasoning == ReasoningMode.COT
+                else self._validate_predict
+            )
+            validation = validator(
+                text=text, entities=entities_json, schema_spec=schema_json
+            )
+            is_valid = bool(getattr(validation, "is_valid", True))
+            validation_feedback = getattr(validation, "feedback", "")
+        else:
+            is_valid = True
+            validation_feedback = "Validation skipped"
 
         # Ground entities to source locations
         if not sources_dict:  # If LLM didn't provide sources, compute them
@@ -80,21 +186,25 @@ class EntityExtractor(dspy.Module):
             )
 
         # Calculate overall confidence
-        confidence = self._calculate_confidence(validation.is_valid, entities_dict)
+        confidence = self._calculate_confidence(is_valid, entities_dict)
 
         return ExtractionResult(
             entities=entities_dict,
             sources=grounded_sources,
             confidence=confidence,
             metadata={
-                "validation_feedback": validation.feedback,
-                "is_valid": validation.is_valid,
+                "validation_feedback": validation_feedback,
+                "is_valid": is_valid,
+                "validation_skipped": not run_validation,
                 "chunk_offset": chunk_offset,
             },
         )
 
     def _parse_llm_sources(
-        self, sources_dict: Dict, chunk_offset: int, text: str = None
+        self,
+        sources_dict: Dict[str, Any],
+        chunk_offset: int,
+        text: Optional[str] = None,
     ) -> Dict[str, List[SourceSpan]]:
         """Parse source information provided by LLM into SourceSpan objects.
 
@@ -143,7 +253,7 @@ class EntityExtractor(dspy.Module):
         self,
         sources: Dict[str, List[SourceSpan]],
         text: str,
-        entities_dict: Dict,
+        entities_dict: Dict[str, Any],
         chunk_offset: int,
     ) -> Dict[str, List[SourceSpan]]:
         """Validate LLM-provided sources and fix incorrect ones.
@@ -232,7 +342,9 @@ class EntityExtractor(dspy.Module):
 
         return fixed_sources
 
-    def _calculate_confidence(self, is_valid: bool, entities_dict: Dict) -> float:
+    def _calculate_confidence(
+        self, is_valid: bool, entities_dict: Dict[str, Any]
+    ) -> float:
         """Calculate overall extraction confidence score."""
         base_confidence = 0.8 if is_valid else 0.4
 
@@ -293,16 +405,42 @@ class ResultAggregator(dspy.Module):
 
         schema_json = json.dumps(get_json_schema(self.schema), indent=2)
 
-        # Use DSPy to intelligently combine extractions
-        summary_result = self.summarize(
-            extractions=extractions_json, schema_spec=schema_json
-        )
+        # Use DSPy to intelligently combine extractions with retry on parse failure
+        max_parse_retries = MAX_PARSE_RETRIES
+        combined_entities = None
+        effective_schema_json = schema_json
 
-        try:
-            combined_entities = json.loads(summary_result.summary)
-        except json.JSONDecodeError:
-            # Fallback: conservatively merge entities across chunks
-            combined_entities = self._conservative_merge(chunk_results)
+        for attempt in range(max_parse_retries):
+            summary_result = self.summarize(
+                extractions=extractions_json, schema_spec=effective_schema_json
+            )
+
+            try:
+                combined_entities = json.loads(summary_result.summary)
+                break  # Success
+            except json.JSONDecodeError as e:
+                error_msg = (
+                    f"JSON parsing failed: {e}\n"
+                    f"Invalid output: {summary_result.summary[:500]}"
+                )
+                effective_schema_json = (
+                    f"{schema_json}\n\n"
+                    f"CRITICAL: Your previous response was not valid JSON. "
+                    f"You MUST return valid JSON. Error: {error_msg}"
+                )
+                if attempt < max_parse_retries - 1:
+                    logger.warning(
+                        "Aggregation parse failed, retry %d/%d: %s",
+                        attempt + 1,
+                        max_parse_retries,
+                        str(e),
+                    )
+                else:
+                    warnings.warn(
+                        f"Aggregation failed to parse after {max_parse_retries} retries, "
+                        "using conservative merge"
+                    )
+                    combined_entities = self._conservative_merge(chunk_results)
 
         # Combine source locations from all chunks
         combined_sources = self._merge_sources(chunk_results)
@@ -407,22 +545,40 @@ class ExtractionPipeline(dspy.Module):
         schema: Type[BaseModel],
         chunking_config: Optional[ChunkingConfig] = None,
         use_sources: bool = True,
+        reasoning: Union[ReasoningMode, str] = ReasoningMode.PREDICT,
     ):
         super().__init__()
         self.schema = schema
         self.chunker = TextChunkerModule(chunking_config)
-        self.extractor = EntityExtractor(schema, use_sources)
+        self.extractor = EntityExtractor(schema, use_sources, reasoning=reasoning)
         self.aggregator = ResultAggregator(schema)
 
-    def forward(self, text: str) -> ExtractionResult:
-        """Run the complete extraction pipeline on input text."""
+    def forward(
+        self,
+        text: str,
+        run_validation: bool = True,
+        reasoning: Union[ReasoningMode, str, None] = None,
+    ) -> ExtractionResult:
+        """Run the complete extraction pipeline on input text.
+
+        Args:
+            text: Input text to extract from
+            run_validation: If False, skip the LLM validation step inside
+                `EntityExtractor` (i.e., it will not call `self.validate`).
+            reasoning: Override reasoning strategy for this call ("predict" or "cot")
+        """
         # Step 1: Chunk the text
         chunks = self.chunker(text)
 
         # Step 2: Extract from each chunk
         chunk_results = []
         for chunk in chunks:
-            extraction = self.extractor(chunk.text, chunk.start_offset)
+            extraction = self.extractor(
+                chunk.text,
+                chunk.start_offset,
+                run_validation=run_validation,
+                reasoning=reasoning,
+            )
             chunk_result = ChunkResult(
                 chunk_id=chunk.id,
                 chunk_text=chunk.text,
@@ -519,7 +675,7 @@ class QueryParser(dspy.Module):
         )
 
     def _calculate_confidence(
-        self, semantic_terms: List[str], structured_filters: Dict
+        self, semantic_terms: List[str], structured_filters: Dict[str, Any]
     ) -> float:
         """Calculate confidence score for the parsing.
 
@@ -544,7 +700,7 @@ class QueryParser(dspy.Module):
         return min(confidence, 1.0)
 
     def _generate_explanation(
-        self, query: str, semantic_terms: List[str], structured_filters: Dict
+        self, query: str, semantic_terms: List[str], structured_filters: Dict[str, Any]
     ) -> str:
         """Generate human-readable explanation of the parsing.
 
